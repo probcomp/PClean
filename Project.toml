@@ -1,0 +1,12 @@
+name = "PClean"
+uuid = "53edc9f0-e33f-11e9-2577-455b726aac0d"
+authors = ["alex-lew <alexlew@mit.edu>"]
+version = "0.1.0"
+
+[deps]
+CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
+Gen = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
+JuliaDB = "a93385a2-3734-596a-9a66-3cfbb77141e6"
+MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StringDistances = "88034a9c-02f8-509d-84a9-84ec65e18404"

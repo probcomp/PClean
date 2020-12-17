@@ -1,66 +1,81 @@
-using Gen
+struct ChooseProportionally <: PCleanDistribution end
 
-struct ChooseProportionally <: Gen.Distribution{Any} end
-
-"""
-    choose_proportionally(objects::AbstractArray{T, 1}, probs::AbstractArray{U, 1}) where {U <: Real}
-Given a vector of probabilities `probs` where `sum(probs) = 1`, sample an `Int` `i` from the set {1, 2, .., `length(probs)`} with probability `probs[i]`, then return `objects[i]`.
-"""
-const choose_proportionally = ChooseProportionally()
-export choose_proportionally
-
-function Gen.logpdf(::ChooseProportionally, x, objects, probs::AbstractArray{U, 1}) where {U <: Real}
-    total = 0
-    for i=1:length(objects)
-        if objects[i] == x
-            total += probs[i]
-        end
-    end
-    return log(total / sum(probs))
+function random(::ChooseProportionally, options, probs::AbstractArray{T}) where T <: Real
+  options[rand(Distributions.Categorical(normalize(probs)))]
 end
 
-function Gen.logpdf(::ChooseProportionally, x, objects, probs::Nothing)
-    return -log(length(objects))
+function logdensity(::ChooseProportionally, observed, options, probs::AbstractArray{T}) where T <: Real
+  relevant_logprobs = logprobs(probs)[options .== observed]
+  isempty(relevant_logprobs) && return -Inf
+  logsumexp(relevant_logprobs)
 end
 
-function Gen.logpdf(::ChooseProportionally, x, probs::Dict) where {U <: Real}
-    return log(probs[x] / sum(values(probs)))
+has_discrete_proposal(::ChooseProportionally) = true
+
+function discrete_proposal(::ChooseProportionally, options, probs::AbstractArray{T}) where T <: Real
+  (options, logprobs(probs))
 end
 
 
-function Gen.logpdf_grad(::ChooseProportionally, x, objects, probs::AbstractArray{U,1})  where {U <: Real}
-    grad = zeros(length(probs))
-    total = 0
-    relevant_indices = []
-    for i=1:length(objects)
-        if objects[i] == x
-            total += probs[i]
-            push!(relevant_indices, i)
-        end
-    end
-    for i in relevant_indices
-        grad[i] = 1. / total - 1. / sum(probs)
-    end
-    (nothing, grad)
+#######################
+# Learned Proportions #
+#######################
+struct VariableSizeProportionsParameterPrior <: ParameterPrior
+  concentration :: Float64
 end
 
-function Gen.random(::ChooseProportionally, objects, probs::AbstractArray{U, 1}) where {U <: Real}
-    normalized_probs = probs / sum(values(probs))
-    objects[categorical(normalized_probs)]
+struct ProportionsParameterPrior
+  concentrations :: Vector{Float64}
 end
 
-function Gen.random(::ChooseProportionally, objects, probs::Nothing)
-    objects[uniform_discrete(1, length(objects))]
+struct ProportionsParameter <: BasicParameter
+  current_value :: Vector{Float64}
+  prior :: Union{ProportionsParameterPrior, VariableSizeProportionsParameterPrior}
+  sample_counts :: Vector{Int}
 end
 
-function Gen.random(::ChooseProportionally, probs::Dict)
-    normalized_probs = collect(values(probs)) / sum(values(probs))
-    collect(keys(probs))[categorical(normalized_probs)]
+default_prior(::Type{ProportionsParameter}) = VariableSizeProportionsParameterPrior(1.0)
+default_prior(::Type{ProportionsParameter}, concentrations::Vector{Float64}) = ProportionsParameterPrior(concentrations)
+default_prior(::Type{ProportionsParameter}, num_options::Int) = ProportionsParameterPrior(ones(Float64, num_options))
+default_prior(::Type{ProportionsParameter}, concentration::Float64) = VariableSizeProportionsParameterPrior(concentration)
+dirichlet_concentrations(prior::VariableSizeProportionsParameterPrior, num_options::Int) = prior.concentration .* ones(Float64, num_options)
+dirichlet_concentrations(prior::ProportionsParameterPrior, num_options::Int) = prior.concentrations
+
+function initialize_parameter(::Type{ProportionsParameter}, prior)
+  ProportionsParameter(Float64[], prior, Int[])
 end
 
-(::ChooseProportionally)(probs) = random(ChooseProportionally(), probs)
+function param_value(p::ProportionsParameter, options)
+  if isempty(p.current_value)
+    num_options = length(options)
+    copy!(p.sample_counts, zeros(Int, num_options))
+    copy!(p.current_value, rand(Dirichlet(dirichlet_concentrations(p.prior, num_options))))
+  end
+  p.current_value
+end
 
-(::ChooseProportionally)(objects, probs) = random(ChooseProportionally(), objects, probs)
+function incorporate_choice!(::ChooseProportionally, observed, options, p::ProportionsParameter)
+  idx = findfirst(x -> x == observed, options)
+  p.sample_counts[idx] += 1
+end
 
-Gen.has_output_grad(::ChooseProportionally) = false
-Gen.has_argument_grads(::ChooseProportionally) = (false,true)
+function unincorporate_choice!(::ChooseProportionally, observed, options, p::ProportionsParameter)
+  idx = findfirst(x -> x == observed, options)
+  if p.sample_counts[idx] <= 0
+    println(observed, p.sample_counts)
+  end
+  p.sample_counts[idx] -= 1
+end
+
+function resample_value!(p::ProportionsParameter)
+  num_options = length(p.current_value)
+  dirichlet_prior = dirichlet_concentrations(p.prior, num_options)
+  copy!(p.sample_counts, max.(0, p.sample_counts))
+  copy!(p.current_value, rand(Dirichlet(dirichlet_prior .+ p.sample_counts)))
+end
+
+discrete_proposal(c::ChooseProportionally, options, probs::ProportionsParameter) = discrete_proposal(c, options, param_value(probs, options))
+random(c::ChooseProportionally, options, probs::ProportionsParameter) = random(c, options, param_value(probs, options))
+logdensity(c::ChooseProportionally, observed, options, probs::ProportionsParameter) = logdensity(c, observed, options, param_value(probs, options))
+
+export ChooseProportionally

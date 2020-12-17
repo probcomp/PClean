@@ -1,12 +1,22 @@
 name = "PClean"
-uuid = "53edc9f0-e33f-11e9-2577-455b726aac0d"
-authors = ["alex-lew <alexlew@mit.edu>"]
+uuid = "ad4d8a49-b7a6-42f4-9958-4de6b66581ba"
+authors = ["alex-lew <alexl.mail@gmail.com>"]
 version = "0.1.0"
 
 [deps]
+BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
-Gen = "ea4f424c-a589-11e8-07c0-fd5c91b9da4a"
-JuliaDB = "a93385a2-3734-596a-9a66-3cfbb77141e6"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
+Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
+Interpolations = "a98d9a8b-a2ab-59e6-89dd-64a1c18fca59"
+JSON = "682c06a0-de6a-54ab-a142-c8b1cf79cde6"
+LightGraphs = "093fc24a-ae57-5d10-9952-331d41423f4d"
 MacroTools = "1914dd2f-81c6-5fcd-8719-6d5c9610ff09"
-Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+Memoize = "c03570c3-d221-55d1-a50c-7939bbd78826"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+Polynomials = "f27b6e38-b328-58d1-80ce-0feddd5e7a45"
+PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 StringDistances = "88034a9c-02f8-509d-84a9-84ec65e18404"

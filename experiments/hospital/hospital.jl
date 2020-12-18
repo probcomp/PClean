@@ -2,7 +2,7 @@ using PClean
 
 include("load_data.jl")
 
-PClean.@pcleanmodel HospitalModel begin 
+PClean.@model HospitalModel begin 
     @class County begin
         @learned state_proportions::ProportionsParameter
         state ~ ChooseProportionally(possibilities[:State], state_proportions)
@@ -26,8 +26,9 @@ PClean.@pcleanmodel HospitalModel begin
     @class Hospital begin
         @learned owner_dist::ProportionsParameter
         @learned service_dist::ProportionsParameter
-        loc ~ Place; type ~ HospitalType
-        id ~ ChooseUniformly(possibilities[:ProviderNumber])
+        loc ~ Place        
+        type ~ HospitalType
+        provider ~ ChooseUniformly(possibilities[:ProviderNumber])
         name ~ StringPrior(3, 50, possibilities[:HospitalName])
         addr ~ StringPrior(10, 30, possibilities[:Address1])
         phone ~ StringPrior(10, 10, possibilities[:PhoneNumber])
@@ -37,12 +38,12 @@ PClean.@pcleanmodel HospitalModel begin
     end;
     @class Obs begin
         begin
-            hosp   ~ Hospital;                         service ~ AddTypos(hosp.service)
-            id     ~ AddTypos(hosp.id);                name    ~ AddTypos(hosp.name)
-            addr   ~ AddTypos(hosp.addr);              city    ~ AddTypos(hosp.loc.city)
-            state  ~ AddTypos(hosp.loc.county.state);  zip     ~ AddTypos(hosp.zip)
-            county ~ AddTypos(hosp.loc.county.county); phone   ~ AddTypos(hosp.phone)
-            type   ~ AddTypos(hosp.type.desc);         owner   ~ AddTypos(hosp.owner)
+            hosp     ~ Hospital;                         service ~ AddTypos(hosp.service)
+            provider ~ AddTypos(hosp.provider);          name    ~ AddTypos(hosp.name)
+            addr     ~ AddTypos(hosp.addr);              city    ~ AddTypos(hosp.loc.city)
+            state    ~ AddTypos(hosp.loc.county.state);  zip     ~ AddTypos(hosp.zip)
+            county   ~ AddTypos(hosp.loc.county.county); phone   ~ AddTypos(hosp.phone)
+            type     ~ AddTypos(hosp.type.desc);         owner   ~ AddTypos(hosp.owner)
         end
         begin
             metric ~ Measure
@@ -56,7 +57,7 @@ PClean.@pcleanmodel HospitalModel begin
 end;
 
 query = @query HospitalModel.Obs [
-    ProviderNumber   hosp.id                id
+    ProviderNumber   hosp.provider          provider
     HospitalName     hosp.name              name
     HospitalType     hosp.type.desc         type
     HospitalOwner    hosp.owner             owner
@@ -79,5 +80,16 @@ observations = [ObservedDataset(query, dirty_table)];
     trace = initialize_trace(observations, config);
     run_inference!(trace, config);
 end
+
 results = evaluate_accuracy(dirty_table, clean_table, trace.tables[:Obs], query)
+PClean.save_results("results", "hospital_badmodel", trace, observations)
 println(results)
+
+PClean.run_smc!(trace, :Hospital, :row_75990, config)
+trace.tables[:Hospital].rows[:row_199662][22]
+for row in first(values(trace.tables[:Hospital].direct_incoming_references[:row_150807]))
+    println(trace.tables[:Obs].rows[row][44])
+end
+
+PClean.run_smc!(trace, :Hospital, :row_199662, config)
+

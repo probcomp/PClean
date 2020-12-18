@@ -17,7 +17,6 @@ function discrete_proposal(::StringPrior, min_length::Int, max_length::Int, prop
   probs = map(s -> logdensity(StringPrior(), s, min_length, max_length, proposal_atoms), proposal_atoms)
   total = logsumexp(probs)
   probs = Float64[probs..., log1p(-exp(total))]
-  # probs   = map(s -> logdensity(StringPrior(), s, min_length, max_length, proposal_atoms), proposal_atoms)..., -log(350)*(min_length/2 + max_length/2)]
   return (options, probs)
 end
 
@@ -38,6 +37,7 @@ random(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{S
   join([alphabet[letter] for letter in letters])
 end
 
+const UNUSUAL_LETTER_PENALTY = 1000
 const string_prior_density_dict = Dict{Tuple{String, Int, Int}, Float64}()
 function logdensity(::StringPrior, observed::String, min_length::Int, max_length::Int, proposal_atoms::Vector{String})
   get!(string_prior_density_dict, (observed, min_length, max_length)) do
@@ -53,7 +53,7 @@ function logdensity(::StringPrior, observed::String, min_length::Int, max_length
     for letter in observed
       dist = isnothing(prev_letter) ? initial_letter_probs : vec(english_letter_transitions[:, prev_letter])
       prev_letter = haskey(alphabet_lookup, lowercase(letter)) ? alphabet_lookup[lowercase(letter)] : nothing
-      score += isnothing(prev_letter) ? -log(28) : max(log(dist[prev_letter]), -1000)
+      score += isnothing(prev_letter) ? -log(28) : max(log(dist[prev_letter]), -UNUSUAL_LETTER_PENALTY)
     end
     score
   end

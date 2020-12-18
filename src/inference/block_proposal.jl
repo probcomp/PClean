@@ -12,9 +12,9 @@ function prune_plan(plan::Plan, state::ProposalRowState)
         elseif haskey(state, k)
             push!(new_plan.steps, Step(k, Plan(Step{Plan}[])))
             
-            # TODO: Only include SupermodelNodes for paths that point here.
-            # (This may require changes to the JIT proposal compiler too.)
-        elseif class_model.nodes[k] isa SupermodelNode
+        # TODO: Only include ExternalLikelihoodNodes for paths that point here.
+        # (This may require changes to the JIT proposal compiler too.)
+        elseif class_model.nodes[k] isa ExternalLikelihoodNode
             push!(new_plan.steps, Step(k, Plan(Step{Plan}[])))
         end
     end
@@ -30,7 +30,7 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
     class_model = state.trace.model.classes[state.class]
     
     function process_node!(node::JuliaNode, idx)
-        # Can't reuse already-computed value if this is a SuperNode, so recompute.
+        # Can't reuse already-computed value if this is an ExternalLikelihoodNode, so recompute.
         evaluated_args = [state[arg] for arg in node.arg_node_ids]
         state[idx] = node.f(evaluated_args...)
     end
@@ -109,14 +109,14 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
         end
     end
     
-    # Propose values for all non-super-model-nodes.
+    # Propose values for all non-external-model-nodes.
     i = 1
-    while i <= length(vertex_order) && !(class_model.nodes[vertex_order[i]] isa SupermodelNode)
+    while i <= length(vertex_order) && !(class_model.nodes[vertex_order[i]] isa ExternalLikelihoodNode)
         process_node!(class_model.nodes[vertex_order[i]], vertex_order[i])
         i += 1
     end
     
-    # Accumulate weights from supermodel nodes.
+    # Accumulate weights from ExternalLikelihood nodes.
     path = nothing
     while i <= length(vertex_order)
         v = vertex_order[i]
@@ -141,7 +141,7 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
             j = i
             while j <= length(vertex_order) && class_model.nodes[vertex_order[j]].path == path
                 node = class_model.nodes[vertex_order[j]]
-                process_node!(node.supernode, node.supernode_id)
+                process_node!(node.external_node, node.external_node_id)
                 j += 1
             end
             # TODO: It seems bad to set this anew each iteration through the loop...
@@ -153,7 +153,6 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
         state.active_parent_trace = nothing
         state.parent_trace_recomputed = Dict()
     end
-    
     return p, q_cont
 end
 

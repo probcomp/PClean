@@ -2,11 +2,11 @@ using CSV
 
 # Load data
 table = CSV.File("datasets/dirty_rents.csv") |> CSV.DataFrame!
-table[!, :Column1] = map(x -> "$(x[1])$(split(x)[1][end])", table[!, :County])
+table[!, :CountyKey] = map(x -> "$(x[1])$(split(x)[1][end])", table[!, :County])
 
 possibilities = Dict(c => Set() for c in unique(table.Column1))
 for r in eachrow(table)
-  push!(possibilities[r[:Column1]], r[:County])
+  push!(possibilities[r[:CountyKey]], r[:County])
 end
 possibilities = Dict(c => [possibilities[c]...] for c in keys(possibilities))
 

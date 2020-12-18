@@ -4,7 +4,7 @@ include("load_data.jl")
 
 websites = unique(dirty_table.src)
 
-PClean.@pcleanmodel FlightsModel begin
+PClean.@model FlightsModel begin
 
   @class TrackingWebsite begin
     name ~ StringPrior(2, 30, websites)

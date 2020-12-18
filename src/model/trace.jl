@@ -59,3 +59,50 @@ function pitman_yor_prior_logprobs(table::TableTrace)
     new_table_prob = log(length(probs) * prior.discount + prior.strength) - logdenom
     return probs, new_table_prob
 end
+
+using Distributions: Gamma, logpdf
+
+function pitman_yor_score(params::PitmanYorParams, reference_counts::Vector{Int})
+    logprob = 0.0
+    n_references = 0
+    for (n_objects, size) in enumerate(reference_counts)
+        # The choice to start a new cluster
+        logprob += log(n_objects * params.discount + params.strength) - log(n_references + params.strength)
+        # The choices to join that cluster
+        if size > 1
+            logprob += sum(log(i - params.discount) - log(n_references + i + params.strength) for i=1:size-1)
+        end
+        n_references += size
+    end
+    return logprob
+end
+
+function resample_py_params!(trace::TableTrace)
+    # Likelihood can be computed via reference counts.
+    counts         = collect(values(trace.reference_counts))
+    current_params = trace.pitman_yor_params
+    old_score      = pitman_yor_score(current_params, counts)
+    # Propose an update to strength.
+    proposed_strength = rand(Gamma(1, 1))
+    proposed_params   = PitmanYorParams(proposed_strength, current_params.discount)
+    new_score         = pitman_yor_score(proposed_params, counts)
+    # Accept or reject it
+    old_q = logpdf(Gamma(1, 1), current_params.strength)
+    new_q = logpdf(Gamma(1, 1), proposed_strength)
+    alpha = new_score + old_q - old_score - new_q
+    if log(rand()) < alpha
+        current_params = proposed_params
+        old_score      = new_score
+    end
+    # Propose an update to discount
+    proposed_discount = rand()
+    proposed_params   = PitmanYorParams(current_params.strength, proposed_discount)
+    new_score         = pitman_yor_score(proposed_params, counts)
+    # Accept or reject
+    alpha = new_score - old_score
+    if log(rand()) < alpha
+        current_params = proposed_params
+    end
+    trace.pitman_yor_params.discount = current_params.discount
+    trace.pitman_yor_params.strength = current_params.strength
+end

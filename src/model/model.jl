@@ -50,11 +50,11 @@ B to A is longer than one hop, SubmodelNode{...SubmodelNode{T}...}.
 const InjectiveVertexMap = Dict{VertexID, VertexID}
 
 
-struct PitmanYorParams
+mutable struct PitmanYorParams
     strength :: Float64
     discount :: Float64
-  end
-  
+end
+
 """
     Step{T}
 
@@ -166,17 +166,17 @@ end
 
 # Represents a computation that uses the values in this model,
 # but are not technically a part of this model.
-struct SupermodelNode <: PCleanNode
+struct ExternalLikelihoodNode <: PCleanNode
   path :: Path
   # ID of this node in the referring class.
-  supernode_id :: VertexID
+  external_node_id :: VertexID
 
-  # A supermodel node should *only* be a JuliaNode
+  # an ExternalLikelihood node should *only* be a JuliaNode
   # or a random choice node (or a foreign key node, though
   # that feature — DPMem-style invocation of a class — is not yet implemented.)
-  # Unlike a SubmodelNode's `subnode`, a SupermodelNode's `supernode` may reference 
+  # Unlike a SubmodelNode's `subnode`, an ExternalLikelihoodNode's `external_node` may reference 
   # VertexIDs *not* valid for the current class, but rather the referring class.
-  supernode :: Union{JuliaNode, RandomChoiceNode, ForeignKeyNode}
+  external_node :: Union{JuliaNode, RandomChoiceNode, ForeignKeyNode}
 end
 
 

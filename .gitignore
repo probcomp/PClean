@@ -1,4 +1,11 @@
-*.jl.cov
-*.jl.*.cov
-*.jl.mem
-deps/deps.jl
+
+.DS_Store
+results
+runtimes
+*.png
+datasets
+*.pyc
+experiments/*_data
+Manifest.toml
+scratch.jl
+models

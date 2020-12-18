@@ -1,36 +1,3 @@
-
-# We can try to implement the generated function machinery manually.
-# Do a preprocessing pass where we collect the different observation index sets,
-# and dispatch manually based on that.
-# Use `eval` to generate the code.
-# Note: how will this work for latent object proposals?
-# Maybe we will need to maintain for every row an observation set, and
-# actually look up the appropriate proposals.
-
-# Five cases to handle:
-
-# Maybe we should actually just work with a running score
-# and trace and q, and update these "on the way down".
-# One issue is that at branch and combine points, it's inaccurate
-#  to assume that 0 is where it can be reset to. 
-# So in those situations, it may make sense to create dummy
-# score and trace and q variables, and after each run, merge them
-# into the ones being created. Yes, this seems right...
-
-# A JuliaNode step simply assigns a variable.
-# A RandomChoiceNode
-#    * Observed: Add log likelihood to score, process the rest, and subtract from score.
-#                Maintain the same "immediate next step."
-#    * Unobserved: 
-#                Add a line for determining the options and prior probabilities.
-#                Add a buffer for storing the probabilities of each branch,
-#                the probabilities of this trace, 
-#                For each option, process the rest of the plan with rests_of_trace
-# A SubmodelNode
-# A ForeignKeyNode
-# # A SupermodelNode
-
-# We define these in new_enumeration currently, so don't need them here (yet)
 strip_subnodes(node::SubmodelNode) = strip_subnodes(node.subnode)
 strip_subnodes(node) = node
 
@@ -45,8 +12,8 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
 
     active_child_traces = Dict{Int, Symbol}()
     active_parent_trace_var = gensym("active_parent_trace")
-    in_supernode_loop = false
-    recomputed_supernode_variables = Dict{Int, Symbol}()
+    in_external_node_loop = false
+    recomputed_external_node_variables = Dict{Int, Symbol}()
 
     # Inputs to the function we will create
     state_var = gensym("state")
@@ -332,27 +299,27 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         delete!(variable_names, idx)
     end
 
-    function get_arg_names_supernode(arg_nums)
-        return [get(recomputed_supernode_variables, i, :($active_parent_trace_var[$i])) for i in arg_nums]
+    function get_arg_names_external_node(arg_nums)
+        return [get(recomputed_external_node_variables, i, :($active_parent_trace_var[$i])) for i in arg_nums]
     end
 
-    function process_node!(node::SupermodelNode, idx, body_statements, prob_output_var, trace_output_var, q_output_var, plan)
+    function process_node!(node::ExternalLikelihoodNode, idx, body_statements, prob_output_var, trace_output_var, q_output_var, plan)
         # Some reimagining might be necessary here.
         # As with submodel, we can decide up front which traces we need to enumerate through at each level.
         # We may need to rethink how things work a bit.
-        if in_supernode_loop
-            if node.supernode isa JuliaNode
-                var_name = get!(gensym, recomputed_supernode_variables, node.supernode_id)
-                arg_exprs = get_arg_names_supernode(node.supernode.arg_node_ids)
-                push!(body_statements, :($var_name = $(node.supernode.f)($(arg_exprs...))))
+        if in_external_node_loop
+            if node.external_node isa JuliaNode
+                var_name = get!(gensym, recomputed_external_node_variables, node.external_node_id)
+                arg_exprs = get_arg_names_external_node(node.external_node.arg_node_ids)
+                push!(body_statements, :($var_name = $(node.external_node.f)($(arg_exprs...))))
                 return process_plan!(plan, body_statements, prob_output_var, trace_output_var, q_output_var)
-            elseif node.supernode isa RandomChoiceNode
-                arg_exprs = get_arg_names_supernode(node.supernode.arg_node_ids)
+            elseif node.external_node isa RandomChoiceNode
+                arg_exprs = get_arg_names_external_node(node.external_node.arg_node_ids)
                 process_plan!(plan, body_statements, prob_output_var, trace_output_var, q_output_var)
-                push!(body_statements, :($prob_output_var += PClean.logdensity($(node.supernode.dist), $(active_parent_trace_var)[$(node.supernode_id)], $(arg_exprs...))))
+                push!(body_statements, :($prob_output_var += PClean.logdensity($(node.external_node.dist), $(active_parent_trace_var)[$(node.external_node_id)], $(arg_exprs...))))
                 return
-            elseif node.supernode isa ForeignKeyNode
-                @assert false "There should not be a SupermodelNode{ForeignKeyNode}."
+            elseif node.external_node isa ForeignKeyNode
+                @assert false "There should not be an ExternalLikelihoodNode{ForeignKeyNode}."
             end
         end
         
@@ -360,26 +327,26 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         # It happens to be the case that this loop will only include blocks
         # at a particular level, due to the way that plans are constructed;
         # this may not be an ideal thing to rely on in the future, though.
-        # (Briefly: supernodes cannot point to other levels' supernodes in the graph,
-        # and supernodes all come at the end. So the levels form connected components
+        # (Briefly: external_nodes cannot point to other levels' external_nodes in the graph,
+        # and external_nodes all come at the end. So the levels form connected components
         # separately after the main nodes have all been sampled.)
         for_loop_body = Expr[]
-        in_supernode_loop = true
+        in_external_node_loop = true
         parent_row_id_var   = gensym("parent_row_id_var")
         source_class = node.path[end].class
         push!(for_loop_body, :($active_parent_trace_var = $state_var.trace.tables[$(Meta.quot(source_class))].rows[$parent_row_id_var]))
         # Make available any relevant changes from the regular nodes.
         vmap = model.classes[class].incoming_references[node.path]
-        assignments = Expr[:($(get!(gensym, recomputed_supernode_variables, j)) = $(variable_names[i])) for (i, j) in vmap if haskey(variable_names, i)]
+        assignments = Expr[:($(get!(gensym, recomputed_external_node_variables, j)) = $(variable_names[i])) for (i, j) in vmap if haskey(variable_names, i)]
         push!(for_loop_body, quote
             $(assignments...)
         end)
         
-        # Call recursively on self, but behavior will be different because we are in_supernode_loop.
+        # Call recursively on self, but behavior will be different because we are in_external_node_loop.
         process_node!(node, idx, for_loop_body, prob_output_var, trace_output_var, q_output_var, plan)
         push!(body_statements, :(for $parent_row_id_var in $state_var.referring_rows[$(node.path)]; $(for_loop_body...); end))
-        in_supernode_loop = false
-        empty!(recomputed_supernode_variables)
+        in_external_node_loop = false
+        empty!(recomputed_external_node_variables)
     end
 
 

@@ -4,14 +4,14 @@ struct Query
     cleanmap::Dict{Symbol,VertexID}
     obsmap::Dict{Symbol,VertexID}
 end
-  
+
 function add_to_query!(query, symbol, clean, dirty)
     clean_id = resolve_dot_expression(query.model, query.class, clean)
     dirty_id = resolve_dot_expression(query.model, query.class, dirty)
     query.cleanmap[symbol] = clean_id
     query.obsmap[symbol] = dirty_id
 end
-  
+
 macro query(model, body)
     q = gensym("query")
 

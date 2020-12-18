@@ -31,6 +31,8 @@ perform_typo(typo, word) = begin
   end
 end
 
+const IMPOSSIBLE = -1e5
+
 random(::AddTypos, word::String, max_typos=nothing) = begin
   num_typos = rand(NegativeBinomial(ceil(length(word) / 5.0), 0.9))
   num_typos = isnothing(max_typos) ? num_typos : min(max_typos, num_typos)
@@ -43,6 +45,8 @@ random(::AddTypos, word::String, max_typos=nothing) = begin
 end
 
 const add_typos_density_dict = Dict{Tuple{String, String}, Float64}()
+const LETTERS_PER_TYPO = 5.0
+
 logdensity(::AddTypos, observed::Union{String,Missing}, word::String, max_typos=nothing) = begin
   if ismissing(observed)
     return 0.0
@@ -51,12 +55,12 @@ logdensity(::AddTypos, observed::Union{String,Missing}, word::String, max_typos=
   get!(add_typos_density_dict, (observed, word)) do
     num_typos = evaluate(DamerauLevenshtein(), observed, word)
     if !isnothing(max_typos) && num_typos > max_typos
-      return -100000
+      return IMPOSSIBLE
     end
 
-    l = logpdf(NegativeBinomial(ceil(length(word) / 5.0), 0.9), num_typos)
+    l = logpdf(NegativeBinomial(ceil(length(word) / LETTERS_PER_TYPO), 0.9), num_typos)
     l -= log(length(word)) * num_typos
-    l -= log(26) * (num_typos) / 2 # Should this be num_typos / 2 (or something smarter)? Maybe we should actually compute the prob of the most probable typo path.
+    l -= log(26) * (num_typos) / 2 # Maybe we should actually compute the prob of the most probable typo path.
     l
   end
 end

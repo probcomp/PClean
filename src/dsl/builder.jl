@@ -131,7 +131,7 @@ function add_foreign_key!(b::PCleanModelBuilder, source_class::ClassID, name::Sy
     add_vertex!(source_model.graph)
     v = nv(source_model.graph)
     source_model.names[name] = v
-    target_model_nodes = filter(node -> !(node isa SupermodelNode), 
+    target_model_nodes = filter(node -> !(node isa ExternalLikelihoodNode), 
                                 target_model.nodes)
     push!(source_model.nodes,
            ForeignKeyNode(target_class, 
@@ -264,15 +264,15 @@ function add_choice_node!(b::PCleanModelBuilder, class::ClassID, name::Symbol, d
 end
 
 #######################
-#     Supernodes      #
+#    External Nodes   #
 #######################
 
-function add_supernodes!(model_node, node_id, block_id, path, target_model, source_model, added_node_ids, from=nothing)
+function add_external_nodes!(model_node, node_id, block_id, path, target_model, source_model, added_node_ids, from=nothing)
     @assert model_node isa ParameterNode || model_node isa SubmodelNode
 end
 
 
-function add_supernodes!(model_node::Union{JuliaNode,RandomChoiceNode,ForeignKeyNode},
+function add_external_nodes!(model_node::Union{JuliaNode,RandomChoiceNode,ForeignKeyNode},
                          node_id, block_id, path, target_model, source_model,
                          added_node_ids, from = nothing)
     
@@ -284,19 +284,19 @@ function add_supernodes!(model_node::Union{JuliaNode,RandomChoiceNode,ForeignKey
         return
     end
 
-    # Add this supernode
+    # Add this external_node
     add_vertex!(target_model.graph)
     added_node_ids[node_id] = nv(target_model.graph)
     if !isnothing(from)
         add_edge!(target_model.graph, from, added_node_ids[node_id])
     end
     push!(target_model.blocks[block_id], added_node_ids[node_id])
-    push!(target_model.nodes, SupermodelNode(path, node_id, model_node))
+    push!(target_model.nodes, ExternalLikelihoodNode(path, node_id, model_node))
 
     # Continue adding, if this is not an absorbing node
     if model_node isa JuliaNode
         for next in outneighbors(source_model.graph, node_id)
-            add_supernodes!(source_model.nodes[next], next, block_id, path, target_model, source_model, added_node_ids, added_node_ids[node_id])
+            add_external_nodes!(source_model.nodes[next], next, block_id, path, target_model, source_model, added_node_ids, added_node_ids[node_id])
         end
     end
 end
@@ -306,7 +306,7 @@ end
 # and a vmap mapping target class nodes to source class nodes,
 # does three things:
 #   1. Adds the path and vmap to the target class's incoming_references.
-#   2. Adds SupermodelNodes to the target class representing the choices of the source class
+#   2. Adds ExternalLikelihoodNodes to the target class representing the choices of the source class
 #   3. Recursively does the same for all paths containing `path` as a prefix.
 function process_reference!(model, target_class, path, vmap)
 
@@ -317,16 +317,16 @@ function process_reference!(model, target_class, path, vmap)
     # Add incoming reference
     target_model.incoming_references[path] = vmap
 
-    # Add supernodes
-    # TODO: We *could* store a *list* of paths in each supernode, and only construct
-    # one 'supernode set' per class.
+    # Add external_nodes
+    # TODO: We *could* store a *list* of paths in each external_node, and only construct
+    # one 'external_node set' per class.
     added_node_ids = Dict() # maps source_class nodes to (newly created) target_class nodes
     for (block_idx, block) in reverse(collect(enumerate(target_model.blocks)))
-        nodes_from_block = [(i, vmap[i]) for i in block if !(target_model.nodes[i] isa SupermodelNode)]
+        nodes_from_block = [(i, vmap[i]) for i in block if !(target_model.nodes[i] isa ExternalLikelihoodNode)]
 
         for (target_node, source_node) in nodes_from_block
             for next in outneighbors(source_model.graph, source_node)
-                add_supernodes!(source_model.nodes[next], next, block_idx, path, target_model, source_model, added_node_ids, target_node)
+                add_external_nodes!(source_model.nodes[next], next, block_idx, path, target_model, source_model, added_node_ids, target_node)
             end
         end
 

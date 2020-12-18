@@ -103,7 +103,7 @@ function flatten_lines(lines)
     return flatlines
 end
 
-macro pcleanmodel(model_name, class_defs)
+macro model(model_name, class_defs)
     class_defs = MacroTools.striplines(class_defs).args
     build_commands = Expr[]
     # For each class

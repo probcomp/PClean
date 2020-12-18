@@ -5,12 +5,12 @@ include("load_data.jl")
 units = [Transformation(identity, identity, x -> 1.0),
         Transformation(x -> x/1000.0, x -> x*1000.0, x -> 1/1000.0)]
 
-PClean.@pcleanmodel RentsModel begin
+PClean.@model RentsModel begin
   @class County begin
     @learned state_pops::ProportionsParameter
-    col1 ~ Unmodeled()
-    @guaranteed col1
-    name ~ StringPrior(10, 35, possibilities[col1])
+    countykey ~ Unmodeled()
+    @guaranteed countykey
+    name ~ StringPrior(10, 35, possibilities[countykey])
     state ~ ChooseProportionally(states, state_pops)
   end;
 
@@ -21,7 +21,7 @@ PClean.@pcleanmodel RentsModel begin
       county_name ~ AddTypos(county.name, 2)
       br ~ ChooseUniformly(room_types)
       unit ~ ChooseUniformly(units)
-      rent_base = avg_rent["$(county.state)_$(county.col1)_$(br)"]
+      rent_base = avg_rent["$(county.state)_$(county.countykey)_$(br)"]
       rent ~ TransformedGaussian(rent_base, 150.0, unit)
     end
     corrected = round(unit.backward(rent))
@@ -29,7 +29,7 @@ PClean.@pcleanmodel RentsModel begin
 end;
 
 query = @query RentsModel.Obs [
-  Column1 county.col1
+  CountyKey county.countykey
   County county.name county_name
   State county.state
   "Room Type" br
@@ -44,5 +44,4 @@ observations = [ObservedDataset(query, table)]
   run_inference!(trace, config);
 end
 
-@time run_inference!(tr, config)
 println(evaluate_accuracy(table, clean_table, trace.tables[:Obs], query))

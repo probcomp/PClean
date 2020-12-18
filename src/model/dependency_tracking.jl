@@ -2,7 +2,7 @@
 # stored in any parameters used by choices in this row. Note that only
 # RandomChoiceNodes can accumulate sufficient statistics; each parameter
 # is scoped so that it can only be used at the level where it is introduced,
-# so we don't have to worry about statistics coming from supernodes/subnodes.
+# so we don't have to worry about statistics coming from external_nodes/subnodes.
 function update_sufficient_statistics!(model::PCleanClass, row_trace::RowTrace, inc_or_dec::Symbol, reevaluate_jns=false)
     for (i, node) in enumerate(model.nodes)
         if reevaluate_jns && node isa JuliaNode

@@ -42,6 +42,7 @@ function initialize_trace(observations::Vector{ObservedDataset}, config::Inferen
                     for (k, param) in trace.tables[rejuv_class].parameters
                         resample_value!(param)
                     end
+                    resample_py_params!(trace.tables[rejuv_class])
                 end
             end
 
@@ -66,10 +67,13 @@ function pgibbs_sweep!(trace::PCleanTrace, config::InferenceConfig)
             if i % config.reporting_frequency == 0
                 println("$class: Cleaning row $i of $n_rows")
             end
+
+            # Maybe update parameters
             if i % config.rejuv_frequency == 0
-                for (i, param) in table.parameters
+                for (_, param) in table.parameters
                     resample_value!(param)
                 end
+                resample_py_params!(table)
             end
             run_smc!(trace, class, key, config)
         end
@@ -82,5 +86,6 @@ function run_inference!(trace::PCleanTrace, config::InferenceConfig)
         pgibbs_sweep!(trace, config)
     end
 end
+
 
 export run_inference!, initialize_trace

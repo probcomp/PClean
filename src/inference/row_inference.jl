@@ -92,6 +92,8 @@ function maybe_resample(particles::Vector{SMCParticle}, ess_threshold::Real=leng
     if verbose
         println("effective sample size: $ess, doing resample: $do_resample")
     end
+    # TODO: This does not use the MH rule -- that is only used at the end. Should using "MH" mean that each block is 
+    # separately accepted or rejected (rather than using this stochastic proposal process?)
     if do_resample
         weights = exp.(log_normalized_weights)
         new_indices = retain_first ? [1; rand(Categorical(weights), num_particles - 1)...] : rand(Categorical(weights), num_particles)

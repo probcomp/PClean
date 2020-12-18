@@ -84,12 +84,3 @@ end
 results = evaluate_accuracy(dirty_table, clean_table, trace.tables[:Obs], query)
 PClean.save_results("results", "hospital_badmodel", trace, observations)
 println(results)
-
-PClean.run_smc!(trace, :Hospital, :row_75990, config)
-trace.tables[:Hospital].rows[:row_199662][22]
-for row in first(values(trace.tables[:Hospital].direct_incoming_references[:row_150807]))
-    println(trace.tables[:Obs].rows[row][44])
-end
-
-PClean.run_smc!(trace, :Hospital, :row_199662, config)
-

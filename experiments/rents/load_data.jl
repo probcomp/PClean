@@ -4,7 +4,7 @@ using CSV
 table = CSV.File("datasets/dirty_rents.csv") |> CSV.DataFrame!
 table[!, :CountyKey] = map(x -> "$(x[1])$(split(x)[1][end])", table[!, :County])
 
-possibilities = Dict(c => Set() for c in unique(table.Column1))
+possibilities = Dict(c => Set() for c in unique(table.CountyKey))
 for r in eachrow(table)
   push!(possibilities[r[:CountyKey]], r[:County])
 end

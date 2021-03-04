@@ -134,49 +134,49 @@ end
 
 # Represents a deterministic computation.
 struct JuliaNode <: PCleanNode
-  f :: Function
-  arg_node_ids :: Vector{VertexID}
+    f :: Function
+    arg_node_ids :: Vector{VertexID}
 end
 
 # Represents a random choice from a primitive distribution.
 struct RandomChoiceNode <: PCleanNode
-  dist :: PCleanDistribution
-  arg_node_ids :: Vector{VertexID}
+    dist :: PCleanDistribution
+    arg_node_ids :: Vector{VertexID}
 end
 
 # Represents a learned parameter's declaration.
 struct ParameterNode <: PCleanNode
-  make_parameter :: Function
+    make_parameter :: Function
 end
 
 # Represents a node that selects a row at random from
 # another table. Points to that other table via learned_table_param.
 struct ForeignKeyNode <: PCleanNode
-  target_class :: ClassID
-  # maps node ids in the target class to node IDs in the current class,
-  # and is used to initialize parameter values.
-  vmap :: InjectiveVertexMap
+    target_class :: ClassID
+    # maps node ids in the target class to node IDs in the current class,
+    # and is used to initialize parameter values.
+    vmap :: InjectiveVertexMap
 end
 
 struct SubmodelNode <: PCleanNode
-  foreign_key_node_id :: VertexID # can be used to lookup the gensym 
-  subnode_id          :: VertexID # the id of this node in the other class; used to look up values in trace
-  subnode             :: PCleanNode # has args that are set according to *this* model's indices
+    foreign_key_node_id :: VertexID # can be used to lookup the gensym
+    subnode_id          :: VertexID # the id of this node in the other class; used to look up values in trace
+    subnode             :: PCleanNode # has args that are set according to *this* model's indices
 end
 
 # Represents a computation that uses the values in this model,
 # but are not technically a part of this model.
 struct ExternalLikelihoodNode <: PCleanNode
-  path :: Path
-  # ID of this node in the referring class.
-  external_node_id :: VertexID
+    path :: Path
+    # ID of this node in the referring class.
+    external_node_id :: VertexID
 
-  # an ExternalLikelihood node should *only* be a JuliaNode
-  # or a random choice node (or a foreign key node, though
-  # that feature — DPMem-style invocation of a class — is not yet implemented.)
-  # Unlike a SubmodelNode's `subnode`, an ExternalLikelihoodNode's `external_node` may reference 
-  # VertexIDs *not* valid for the current class, but rather the referring class.
-  external_node :: Union{JuliaNode, RandomChoiceNode, ForeignKeyNode}
+    # an ExternalLikelihood node should *only* be a JuliaNode
+    # or a random choice node (or a foreign key node, though
+    # that feature — DPMem-style invocation of a class — is not yet implemented.)
+    # Unlike a SubmodelNode's `subnode`, an ExternalLikelihoodNode's `external_node` may reference
+    # VertexIDs *not* valid for the current class, but rather the referring class.
+    external_node :: Union{JuliaNode, RandomChoiceNode, ForeignKeyNode}
 end
 
 

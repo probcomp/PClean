@@ -41,7 +41,7 @@ function initialize_observed_table_instrumented!(query::Query, data::DataFrame, 
     for (i, row) in enumerate(eachrow(data))
       d = Dict{Int, Any}()
       sizehint!(d, rough_n_obs)
-      for (k, v) in zip(names(data), row)
+      for (k, v) in zip(propertynames(data), row)
         if haskey(query.obsmap, k)
           if !ismissing(v)
             d[query.obsmap[k]] = v

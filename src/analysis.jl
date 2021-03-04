@@ -27,7 +27,7 @@ function save_results(dir, name, trace, observed_datasets, timestamp=true)
                                 [table_trace.rows[i][query.cleanmap[k]]
                                     for i in sort(collect(keys(table_trace.rows)))] :
                                 data[!, k]
-                            for k in names(data)]...)
+                            for k in propertynames(data)]...)
     CSV.write("$dir/reconstructed_$class.csv", tbldf)
   end
   save_tables(dir, trace)
@@ -45,7 +45,7 @@ function evaluate_accuracy(dirty_data, clean_data, table, query)
   pcleaned_rows = [table.rows[i] for i=1:n_rows]
   cleanmap = query.cleanmap
   for (dirty, clean, ours) in zip(eachrow(dirty_data), eachrow(clean_data), pcleaned_rows)
-    for colname in names(clean_data)
+    for colname in propertynames(clean_data)
       if !haskey(dirty, colname)
         continue
       end
@@ -103,7 +103,7 @@ function evaluate_accuracy_up_to(dirty_data, clean_data, table, query, N)
   cleanmap = query.cleanmap
 
   for (dirty, clean, ours) in zip(eachrow(dirty_data), eachrow(clean_data), pcleaned_rows)
-    for colname in names(clean_data)
+    for colname in propertynames(clean_data)
       if !haskey(dirty, colname)
         continue
       end

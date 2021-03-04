@@ -20,7 +20,7 @@ function initialize_trace(observations::Vector{ObservedDataset}, config::Inferen
         for (i, row) in enumerate(eachrow(observed_dataset.data))
             row_trace = Dict{VertexID, Any}()
             sizehint!(row_trace, rough_n_obs)
-            for (k, v) in zip(names(observed_dataset.data), row)
+            for (k, v) in zip(propertynames(observed_dataset.data), row)
                 if haskey(observed_dataset.query.obsmap, k)
                     node_id = observed_dataset.query.obsmap[k]
                     if !ismissing(v)

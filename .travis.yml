@@ -12,4 +12,4 @@ env:
   - PCLEAN_EXAMPLE=rents
 
 script:
-    julia --project=. -e 'dir=ENV["PCLEAN_EXAMPLE"]; include("experiments/$dir/run.jl");'
+    julia -e 'using Pkg; Pkg.instantiate(); dir=ENV["PCLEAN_EXAMPLE"]; include("experiments/$dir/run.jl");'

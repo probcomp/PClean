@@ -1,11 +1,12 @@
 using CSV
+using DataFrames: DataFrame
 
 struct StringPrior <: PCleanDistribution end
 
 letter_probs_file = joinpath(dirname(pathof(PClean)), "distributions", "lmparams", "letter_probabilities.csv")
 letter_trans_file = joinpath(dirname(pathof(PClean)), "distributions", "lmparams", "letter_transition_matrix.csv")
-const initial_letter_probs = CSV.File(letter_probs_file; header=false) |> CSV.DataFrame! |> Array{Float64}
-const english_letter_transitions = CSV.File(letter_trans_file; header=false) |> CSV.DataFrame! |> Matrix{Float64}
+const initial_letter_probs = CSV.File(letter_probs_file; header=false) |> DataFrame |> Array{Float64}
+const english_letter_transitions = CSV.File(letter_trans_file; header=false) |> DataFrame |> Matrix{Float64}
 const alphabet = [collect('a':'z')..., ' ', '.']
 const alphabet_lookup = Dict([l => i for (i, l) in enumerate(alphabet)])
 

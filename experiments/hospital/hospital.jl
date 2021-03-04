@@ -74,7 +74,7 @@ query = @query HospitalModel.Obs [
     Stateavg         stateavg               stateavg_obs
 ];
 
-config = PClean.InferenceConfig(1, 2; use_mh_instead_of_pg=true);
+config = PClean.InferenceConfig(1, 2; use_mh_instead_of_pg=true, reporting_frequency=1);
 observations = [ObservedDataset(query, dirty_table)];
 @time begin 
     trace = initialize_trace(observations, config);

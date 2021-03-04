@@ -17,9 +17,9 @@
 # as accepted rejuvenation particles; that we *will* need to handle.
 
 using JSON
+using DataFrames: DataFrame
 
-
-function initialize_observed_table_instrumented!(query::Query, data::CSV.DataFrame, config::InferenceConfig, measurement, with_rejuv=false, existing_subtable_traces = TableTrace[])
+function initialize_observed_table_instrumented!(query::Query, data::DataFrame, config::InferenceConfig, measurement, with_rejuv=false, existing_subtable_traces = TableTrace[])
     # Extract model
     model = query.model
   

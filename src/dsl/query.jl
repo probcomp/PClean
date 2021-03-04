@@ -1,3 +1,5 @@
+using DataFrames: DataFrame
+
 struct Query
     model::PCleanModel
     class::ClassID
@@ -39,7 +41,7 @@ end
 
 struct ObservedDataset
     query::Query
-    data::CSV.DataFrame
+    data::DataFrame
 end
 
 export Query, @query, ObservedDataset

@@ -1,4 +1,5 @@
 using Dates
+using DataFrames: DataFrame
 
 is_saveable(::RandomChoiceNode) = true
 is_saveable(::JuliaNode) = true
@@ -7,7 +8,7 @@ is_saveable(::PCleanNode) = false
 
 function save_tables(dir, trace)
     for (class, table) in trace.tables 
-        tbldf = CSV.DataFrame(; id = collect(keys(table.rows)), [k => [row[i] for row in values(table.rows)] for (k, i) in trace.model.classes[class].names if !occursin("#", string(k)) && is_saveable(trace.model.classes[class].nodes[i])]...)
+        tbldf = DataFrame(; id = collect(keys(table.rows)), [k => [row[i] for row in values(table.rows)] for (k, i) in trace.model.classes[class].names if !occursin("#", string(k)) && is_saveable(trace.model.classes[class].nodes[i])]...)
         CSV.write("$dir/inferred_$class.csv", tbldf)
     end
 end
@@ -22,7 +23,7 @@ function save_results(dir, name, trace, observed_datasets, timestamp=true)
     table_trace = trace.tables[class]
     data = dataset.data
 
-    tbldf = CSV.DataFrame(; [k => haskey(query.cleanmap, k) ?
+    tbldf = DataFrame(; [k => haskey(query.cleanmap, k) ?
                                 [table_trace.rows[i][query.cleanmap[k]]
                                     for i in sort(collect(keys(table_trace.rows)))] :
                                 data[!, k]

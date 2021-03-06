@@ -16,14 +16,12 @@ PClean.@model RentsModel begin
 
   @class Obs begin
     @learned avg_rent::Dict{String, MeanParameter{1500, 1000}}
-    begin
-      county ~ County
-      county_name ~ AddTypos(county.name, 2)
-      br ~ ChooseUniformly(room_types)
-      unit ~ ChooseUniformly(units)
-      rent_base = avg_rent["$(county.state)_$(county.countykey)_$(br)"]
-      rent ~ TransformedGaussian(rent_base, 150.0, unit)
-    end
+    county ~ County
+    county_name ~ AddTypos(county.name, 2)
+    br ~ ChooseUniformly(room_types)
+    unit ~ ChooseUniformly(units)
+    rent_base = avg_rent["$(county.state)_$(county.countykey)_$(br)"]
+    rent ~ TransformedGaussian(rent_base, 150.0, unit)
     corrected = round(unit.backward(rent))
   end;
 end;

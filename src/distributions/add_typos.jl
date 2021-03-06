@@ -3,7 +3,7 @@ import StringDistances: DamerauLevenshtein, evaluate
 """
     word_with_typos::String ~ AddTypos(word::String, max_typos=nothing)
 
-Add a random number of random typos to the given string.
+Add a random number of random typos to `word`.
 
 The distribution on the of typos added to a word depends on the word
 length. On average there is approximately 1 typo for every 45 characters in the

@@ -1,7 +1,7 @@
 """
     noisy_value::Float64 ~ AddNoise(mean::Float64, std::Float64)
 
-Adds normally-distributed random noise (with standard deviation `std`) to the value `std`.
+Adds normally-distributed random noise (with standard deviation `std`) to the value `mean`.
 """
 struct AddNoise <: PCleanDistribution end
 

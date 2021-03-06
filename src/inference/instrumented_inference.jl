@@ -17,9 +17,9 @@
 # as accepted rejuvenation particles; that we *will* need to handle.
 
 using JSON
+using DataFrames: DataFrame
 
-
-function initialize_observed_table_instrumented!(query::Query, data::CSV.DataFrame, config::InferenceConfig, measurement, with_rejuv=false, existing_subtable_traces = TableTrace[])
+function initialize_observed_table_instrumented!(query::Query, data::DataFrame, config::InferenceConfig, measurement, with_rejuv=false, existing_subtable_traces = TableTrace[])
     # Extract model
     model = query.model
   
@@ -41,7 +41,7 @@ function initialize_observed_table_instrumented!(query::Query, data::CSV.DataFra
     for (i, row) in enumerate(eachrow(data))
       d = Dict{Int, Any}()
       sizehint!(d, rough_n_obs)
-      for (k, v) in zip(names(data), row)
+      for (k, v) in zip(propertynames(data), row)
         if haskey(query.obsmap, k)
           if !ismissing(v)
             d[query.obsmap[k]] = v

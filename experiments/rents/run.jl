@@ -37,11 +37,11 @@ query = @query RentsModel.Obs [
 ];
 
 config = PClean.InferenceConfig(1, 2; use_mh_instead_of_pg=true, rejuv_frequency=500)
-observations = [ObservedDataset(query, table)]
+observations = [ObservedDataset(query, dirty_table)]
 
 @time begin
   trace = initialize_trace(observations, config);
   run_inference!(trace, config);
 end
 
-println(evaluate_accuracy(table, clean_table, trace.tables[:Obs], query))
+println(evaluate_accuracy(dirty_table, clean_table, trace.tables[:Obs], query))

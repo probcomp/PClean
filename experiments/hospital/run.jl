@@ -82,5 +82,5 @@ observations = [ObservedDataset(query, dirty_table)];
 end
 
 results = evaluate_accuracy(dirty_table, clean_table, trace.tables[:Obs], query)
-PClean.save_results("results", "hospital_badmodel", trace, observations)
+PClean.save_results("results", "hospital", trace, observations)
 println(results)

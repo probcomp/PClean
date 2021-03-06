@@ -1,10 +1,9 @@
 using CSV
-using DataFrames: DataFrame, unstack
+using DataFrames: DataFrame
 
 dataset = "hospital"
-dirty_table = CSV.File("datasets/$dataset.csv") |> DataFrame
-clean_table_long = CSV.File("datasets/$(dataset)_clean.csv") |> DataFrame
-clean_table = unstack(clean_table_long, :tid, :attribute, :correct_val)
+dirty_table = CSV.File("datasets/$(dataset)_dirty.csv") |> DataFrame
+clean_table = CSV.File("datasets/$(dataset)_clean.csv") |> DataFrame
 
 clean_table[!, :PhoneNumber] = map(x -> "$x", clean_table[!, :PhoneNumber])
 clean_table[!, :ZipCode] = map(x -> "$x", clean_table[!, :ZipCode])

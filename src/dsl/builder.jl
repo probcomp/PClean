@@ -6,16 +6,13 @@ using LightGraphs
 ############
 
 @enum BlockStatus begin
-    explicitly_open # all new nodes added to most recent block
-    will_close_on_choice # non-choice-nodes add to most recent block
-    closed # must start new block
+    open   # all new nodes added to most recent block
+    closed # current block is over; next statement goes in new block
 end
 
 function begin_block!(b, class)
-    if b.block_status == closed
-        push!(b.model.classes[class].blocks, [])
-    end
-    b.block_status = explicitly_open
+    push!(b.model.classes[class].blocks, [])
+    b.block_status = open
 end
 
 function end_block!(b)
@@ -168,13 +165,12 @@ function add_foreign_key!(b::PCleanModelBuilder, source_class::ClassID, name::Sy
   
     # Add newly created nodes to blocks.
     all_sampled_nodes = vcat([v], [filter(x -> x <= limit, map(x -> x + v, block)) for block in target_model.blocks]...)
-    if b.block_status == explicitly_open
+
+    if b.block_status == open
         push!(source_model.blocks[end], all_sampled_nodes...)
     elseif b.block_status == closed
         push!(source_model.blocks, all_sampled_nodes)
-    else
-        push!(source_model.blocks[end], all_sampled_nodes...)
-        b.block_status = closed
+        b.block_status = open
     end
 end
 
@@ -228,7 +224,7 @@ function add_julia_node!(b::PCleanModelBuilder, class::ClassID, name::Symbol, ar
     # Place it in a block.
     if b.block_status == closed
         push!(class_model.blocks, [v])
-        b.block_status = will_close_on_choice
+        b.block_status = open
     else
         push!(class_model.blocks[end], v)
     end
@@ -253,13 +249,11 @@ function add_choice_node!(b::PCleanModelBuilder, class::ClassID, name::Symbol, d
     push!(class_model.nodes, RandomChoiceNode(dist, arg_indices))
   
     # Place it in a block.
-    if b.block_status == explicitly_open
+    if b.block_status == open
         push!(class_model.blocks[end], v)
     elseif b.block_status == closed
         push!(class_model.blocks, [v])
-    else
-        push!(class_model.blocks[end], v)
-        b.block_status = closed
+        b.block_status = open
     end
 end
 

@@ -11,7 +11,9 @@ PClean.@model FlightsModel begin
   end
 
   @class Flight begin
-    flight_id ~ StringPrior(10, 20, flight_ids); @guaranteed flight_id
+    begin 
+      flight_id ~ StringPrior(10, 20, flight_ids); @guaranteed flight_id
+    end
     sdt ~ TimePrior(times_for_flight["$flight_id-sched_dep_time"])
     sat ~ TimePrior(times_for_flight["$flight_id-sched_arr_time"])
     adt ~ TimePrior(times_for_flight["$flight_id-act_dep_time"])
@@ -20,14 +22,18 @@ PClean.@model FlightsModel begin
 
   @class Obs begin
     @learned error_probs::Dict{String, ProbParameter{10.0, 50.0}}
-    flight ~ Flight; src ~ TrackingWebsite
-    error_prob = lowercase(src.name) == lowercase(flight.flight_id[1:2]) ? 1e-5 : error_probs[src.name]
-    sdt ~ MaybeSwap(flight.sdt, times_for_flight["$(flight.flight_id)-sched_dep_time"], error_prob)
-    sat ~ MaybeSwap(flight.sat, times_for_flight["$(flight.flight_id)-sched_arr_time"], error_prob)
-    adt ~ MaybeSwap(flight.adt, times_for_flight["$(flight.flight_id)-act_dep_time"],   error_prob)
-    aat ~ MaybeSwap(flight.aat, times_for_flight["$(flight.flight_id)-act_arr_time"],   error_prob)
+    begin 
+      flight ~ Flight; 
+      src ~ TrackingWebsite 
+    end
+    begin
+      error_prob = lowercase(src.name) == lowercase(flight.flight_id[1:2]) ? 1e-5 : error_probs[src.name]
+      sdt ~ MaybeSwap(flight.sdt, times_for_flight["$(flight.flight_id)-sched_dep_time"], error_prob)
+      sat ~ MaybeSwap(flight.sat, times_for_flight["$(flight.flight_id)-sched_arr_time"], error_prob)
+      adt ~ MaybeSwap(flight.adt, times_for_flight["$(flight.flight_id)-act_dep_time"],   error_prob)
+      aat ~ MaybeSwap(flight.aat, times_for_flight["$(flight.flight_id)-act_arr_time"],   error_prob)
+    end
   end
-
 end;
 
 query = @query FlightsModel.Obs [

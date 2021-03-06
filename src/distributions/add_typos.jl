@@ -7,7 +7,7 @@ Add a random number of random typos to the given string.
 
 The distribution on the of typos added to a word depends on the word
 length. On average there is approximately 1 typo for every 45 characters in the
-input word when max_typos is large or not provided.
+input word when `max_typos` is large or not provided.
 
 The typos can be one of several types:
 

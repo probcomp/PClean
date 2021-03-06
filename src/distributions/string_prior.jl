@@ -5,8 +5,8 @@ using CSV
 
 Sample a string of random length froma simple bigram model fit to English text.
 
-The string length is uniformly distributed between min_length and max_length (inclusive).
-The alphabet is {'a', 'b', .., 'z', ' ', '.'}.
+The string length is uniformly distributed between `min_length` and `max_length` (inclusive).
+The alphabet is the set {'a', 'b', .., 'z', ' ', '.'}.
 """
 struct StringPrior <: PCleanDistribution end
 

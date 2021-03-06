@@ -1,11 +1,11 @@
 using CSV
 
 """
-    TimePrior(
+    timestamp::String ~ TimePrior(proposal_atoms::Vector{String})
 
-Return a random time stamp of form @sprintf("%d:%02d %s", hours, minutes, ampm).
+Return a random time stamp of form `@sprintf("%d:%02d %s", hours, minutes, ampm)`.
 
-The hours, minutes and ampm are drawn uniformly from {1, .., 12}, {0, .., 59}, and {"a.m.", "p.m."} respectively.
+The `hours`, `minutes` and `ampm` are drawn uniformly from {1, .., 12}, {0, .., 59}, and {"a.m.", "p.m."} respectively.
 """
 struct TimePrior <: PCleanDistribution end
 

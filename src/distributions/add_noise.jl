@@ -1,3 +1,8 @@
+"""
+    noisy_value::Float64 ~ AddNoise(mean::Float64, std::Float64)
+
+Adds normally-distributed random noise (with standard deviation `std`) to the value `std`.
+"""
 struct AddNoise <: PCleanDistribution end
 
 has_discrete_proposal(::AddNoise) = false

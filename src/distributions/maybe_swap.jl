@@ -1,7 +1,7 @@
 """
     MaybeSwap(val, options, prob)
 
-With probability prob, return a random element from options, otherwise return val.
+With probability `prob`, return a random element from `options`, otherwise return `val`.
 """
 struct MaybeSwap <: PCleanDistribution end
 

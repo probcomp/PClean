@@ -137,7 +137,8 @@ function run_smc!(trace::PCleanTrace, class::ClassID, key::Key, config::Inferenc
     
     # Run the SMC algorithm, one block proposal at a time.
     log_ml = 0.0
-    for i = 1:length(trace.model.classes[class].blocks)
+    num_blocks = length(trace.model.classes[class].blocks)
+    for i = 1:num_blocks
         for j = 1:config.num_particles
             if j == 1
                 particles[j].state.retained_trace = retained_row_trace
@@ -145,10 +146,13 @@ function run_smc!(trace::PCleanTrace, class::ClassID, key::Key, config::Inferenc
             extend_particle!(particles[j], config)
         end
         
-        # Now perform a "maybe resample" step.
-        # TODO: don't resample right before last round?
-        particles, log_ml_increment = maybe_resample(particles; retain_first=is_csmc_run)
-        log_ml += log_ml_increment
+        # Don't perform resampling if:
+        #  * we are not using PG, or
+        #  * this is the last step.
+        if !config.use_mh_instead_of_pg && i < num_blocks
+            particles, log_ml_increment = maybe_resample(particles; retain_first=is_csmc_run)
+            log_ml += log_ml_increment
+        end
     end
     
     # At the end, we have a weighted collection of particles; choose 1 to return.

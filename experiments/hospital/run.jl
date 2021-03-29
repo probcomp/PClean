@@ -26,8 +26,7 @@ PClean.@model HospitalModel begin
     @class Hospital begin
         @learned owner_dist::ProportionsParameter
         @learned service_dist::ProportionsParameter
-        loc ~ Place        
-        type ~ HospitalType
+        loc ~ Place; type ~ HospitalType
         provider ~ ChooseUniformly(possibilities[:ProviderNumber])
         name ~ StringPrior(3, 50, possibilities[:HospitalName])
         addr ~ StringPrior(10, 30, possibilities[:Address1])
@@ -36,7 +35,7 @@ PClean.@model HospitalModel begin
         zip ~ ChooseUniformly(possibilities[:ZipCode])
         service ~ ChooseProportionally(possibilities[:EmergencyService], service_dist)
     end;
-    @class Obs begin
+    @class Record begin
         begin
             hosp     ~ Hospital;                         service ~ AddTypos(hosp.service)
             provider ~ AddTypos(hosp.provider);          name    ~ AddTypos(hosp.name)
@@ -56,7 +55,7 @@ PClean.@model HospitalModel begin
     end;
 end;
 
-query = @query HospitalModel.Obs [
+query = @query HospitalModel.Record [
     ProviderNumber   hosp.provider          provider
     HospitalName     hosp.name              name
     HospitalType     hosp.type.desc         type
@@ -81,6 +80,6 @@ observations = [ObservedDataset(query, dirty_table)];
     run_inference!(trace, config);
 end
 
-results = evaluate_accuracy(dirty_table, clean_table, trace.tables[:Obs], query)
+results = evaluate_accuracy(dirty_table, clean_table, trace.tables[:Record], query)
 PClean.save_results("results", "hospital", trace, observations)
 println(results)

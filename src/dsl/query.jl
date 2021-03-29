@@ -1,5 +1,3 @@
-using DataFrames: DataFrame
-
 struct Query
     model::PCleanModel
     class::ClassID

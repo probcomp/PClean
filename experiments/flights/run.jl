@@ -5,11 +5,10 @@ include("load_data.jl")
 websites = unique(dirty_table.src)
 
 PClean.@model FlightsModel begin
-
   @class TrackingWebsite begin
     name ~ StringPrior(2, 30, websites)
   end
-
+  
   @class Flight begin
     begin 
       flight_id ~ StringPrior(10, 20, flight_ids); @guaranteed flight_id
@@ -24,10 +23,10 @@ PClean.@model FlightsModel begin
     @learned error_probs::Dict{String, ProbParameter{10.0, 50.0}}
     begin 
       flight ~ Flight; 
-      src ~ TrackingWebsite 
     end
+    src ~ TrackingWebsite 
+    error_prob = lowercase(src.name) == lowercase(flight.flight_id[1:2]) ? 1e-5 : error_probs[src.name]
     begin
-      error_prob = lowercase(src.name) == lowercase(flight.flight_id[1:2]) ? 1e-5 : error_probs[src.name]
       sdt ~ MaybeSwap(flight.sdt, times_for_flight["$(flight.flight_id)-sched_dep_time"], error_prob)
       sat ~ MaybeSwap(flight.sat, times_for_flight["$(flight.flight_id)-sched_arr_time"], error_prob)
       adt ~ MaybeSwap(flight.adt, times_for_flight["$(flight.flight_id)-act_dep_time"],   error_prob)

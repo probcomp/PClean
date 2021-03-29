@@ -3,6 +3,7 @@ module PClean
 using Distributions
 using LightGraphs
 using CSV
+using DataFrames: DataFrame
 
 include("utils.jl")
 

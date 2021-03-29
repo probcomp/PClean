@@ -1,5 +1,4 @@
 using Dates
-using DataFrames: DataFrame
 
 is_saveable(::RandomChoiceNode) = true
 is_saveable(::JuliaNode) = true
@@ -34,7 +33,7 @@ function save_results(dir, name, trace, observed_datasets, timestamp=true)
 end
 
 
-function evaluate_accuracy(dirty_data, clean_data, table, query)
+function evaluate_accuracy(dirty_data, clean_data, table, query; verbose=false)
   total_errors = 0
   total_changed = 0 # not including imputed
   total_cleaned = 0 # correct repairs; total_changed - total_cleaned gives incorrect repairs
@@ -71,13 +70,11 @@ function evaluate_accuracy(dirty_data, clean_data, table, query)
           total_changed += 1
           if our_version == clean[colname]
             total_cleaned += 1
-          else
+          elseif verbose
             println("Changed: $(dirty[colname]) -> $our_version instead of $(clean[colname])")
           end
-        else
-          if dirty[colname] != clean[colname]
-            println("Left unchanged: $(dirty[colname]) (should be $(clean[colname]))")
-          end
+        elseif verbose && dirty[colname] != clean[colname]
+          println("Left unchanged: $(dirty[colname]) (should be $(clean[colname]))")
         end
       end
     end
@@ -132,12 +129,6 @@ function evaluate_accuracy_up_to(dirty_data, clean_data, table, query, N)
           total_changed += 1
           if our_version == clean[colname]
             total_cleaned += 1
-          else
-           # println("Changed: $(dirty[colname]) -> $our_version instead of $(clean[colname])")
-          end
-        else
-          if dirty[colname] != clean[colname]
-           # println("Left unchanged: $(dirty[colname]) (should be $(clean[colname]))")
           end
         end
       end

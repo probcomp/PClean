@@ -2,8 +2,8 @@ using CSV
 using DataFrames: DataFrame
 
 dataset = "hospital"
-dirty_table = CSV.File("datasets/$(dataset)_dirty.csv") |> DataFrame
-clean_table = CSV.File("datasets/$(dataset)_clean.csv") |> DataFrame
+dirty_table = CSV.File("datasets/$(dataset)_dirty.csv", stringtype=String) |> DataFrame
+clean_table = CSV.File("datasets/$(dataset)_clean.csv", stringtype=String) |> DataFrame
 
 # In the dirty data, CSV.jl infers that PhoneNumber, ZipCode, and ProviderNumber
 # are strings. Our PClean script also models these columns as string-valued.

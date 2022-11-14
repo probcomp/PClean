@@ -3,8 +3,8 @@ using DataFrames: DataFrame
 
 # Load data
 dataset = "rents"
-dirty_table = CSV.File("datasets/$(dataset)_dirty.csv") |> DataFrame
-clean_table = CSV.File("datasets/$(dataset)_clean.csv") |> DataFrame
+dirty_table = CSV.File("datasets/$(dataset)_dirty.csv", stringtype=String) |> DataFrame
+clean_table = CSV.File("datasets/$(dataset)_clean.csv", stringtype=String) |> DataFrame
 
 dirty_table[!, :CountyKey] = map(x -> "$(x[1])$(split(x)[1][end])", dirty_table[!, :County])
 

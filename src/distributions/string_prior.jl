@@ -1,6 +1,14 @@
 using CSV
 using DataFrames: DataFrame
 
+"""
+    str::String ~ StringPrior(min_length, max_length, proposal_atoms::Vector{String})
+
+Sample a string of random length froma simple bigram model fit to English text.
+
+The string length is uniformly distributed between `min_length` and `max_length` (inclusive).
+The alphabet is the set {'a', 'b', .., 'z', ' ', '.'}.
+"""
 struct StringPrior <: PCleanDistribution end
 
 letter_probs_file = joinpath(dirname(pathof(PClean)), "distributions", "lmparams", "letter_probabilities.csv")

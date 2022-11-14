@@ -1,5 +1,26 @@
 import StringDistances: DamerauLevenshtein, evaluate
 
+"""
+    word_with_typos::String ~ AddTypos(word::String, max_typos=nothing)
+
+Add a random number of random typos to `word`.
+
+The distribution on the of typos added to a word depends on the word
+length. On average there is approximately 1 typo for every 45 characters in the
+input word when `max_typos` is large or not provided.
+
+The typos can be one of several types:
+
+- insertion: insert a random lower-case letter at a random location
+
+- deletion: delete a random character
+
+- substitution: replace a random character with a random lower-case letter
+
+- transpose: swap a random pair of two consecutive letters
+
+NOTE: The log-density is approximate
+"""
 struct AddTypos <: PCleanDistribution end
 
 has_discrete_proposal(::AddTypos) = false

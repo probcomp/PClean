@@ -33,7 +33,7 @@ end
 
 const IMPOSSIBLE = -1e5
 
-random(::AddTypos, word::String, max_typos=nothing) = begin
+random(::AddTypos, word::AbstractString, max_typos=nothing) = begin
   num_typos = rand(NegativeBinomial(ceil(length(word) / 5.0), 0.9))
   num_typos = isnothing(max_typos) ? num_typos : min(max_typos, num_typos)
   for i=1:num_typos
@@ -47,7 +47,7 @@ end
 const add_typos_density_dict = Dict{Tuple{String, String}, Float64}()
 const LETTERS_PER_TYPO = 5.0
 
-logdensity(::AddTypos, observed::Union{String,Missing}, word::String, max_typos=nothing) = begin
+logdensity(::AddTypos, observed::Union{<:AbstractString,Missing}, word::AbstractString, max_typos=nothing) = begin
   if ismissing(observed)
     return 0.0
   end

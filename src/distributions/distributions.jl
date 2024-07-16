@@ -5,7 +5,7 @@ function random end
 function logdensity end
 
 struct ProposalDummyValue end
-const proposal_dummy_value = ProposalDummyValue()
+const PROPOSAL_DUMMY_VALUE = ProposalDummyValue()
 
 # Can this distribution enumerate values on which
 # its posterior support is concentrated? If the distribution's

@@ -13,19 +13,19 @@ const alphabet_lookup = Dict([l => i for (i, l) in enumerate(alphabet)])
 has_discrete_proposal(::StringPrior) = true
 
 # Assume proposal_atoms are unique.
-function discrete_proposal(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{String})::Tuple{Vector{Union{String, ProposalDummyValue}}, Vector{Float64}}
-  options = Union{String, ProposalDummyValue}[proposal_atoms..., proposal_dummy_value]
+function discrete_proposal(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{T})::Tuple{Vector{Union{T, ProposalDummyValue}}, Vector{Float64}} where T<:AbstractString
+  options = Union{T, ProposalDummyValue}[proposal_atoms..., PROPOSAL_DUMMY_VALUE]
   probs = map(s -> logdensity(StringPrior(), s, min_length, max_length, proposal_atoms), proposal_atoms)
   total = logsumexp(probs)
   probs = Float64[probs..., log1p(-exp(total))]
   return (options, probs)
 end
 
-discrete_proposal_dummy_value(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{String}) = begin
+function discrete_proposal_dummy_value(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{<:AbstractString})
   join(fill("*", Int(floor((min_length + max_length) / 2))))
 end
 
-random(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{String}) = begin
+random(::StringPrior, min_length::Int, max_length::Int, proposal_atoms::Vector{<:AbstractString}) = begin
   len = rand(DiscreteUniform(min_length, max_length))
   letters = []
   for i=1:len
@@ -40,7 +40,7 @@ end
 
 const UNUSUAL_LETTER_PENALTY = 1000
 const string_prior_density_dict = Dict{Tuple{String, Int, Int}, Float64}()
-function logdensity(::StringPrior, observed::String, min_length::Int, max_length::Int, proposal_atoms::Vector{String})
+function logdensity(::StringPrior, observed::AbstractString, min_length::Int, max_length::Int, proposal_atoms::Vector{<:AbstractString})
   get!(string_prior_density_dict, (observed, min_length, max_length)) do
     if length(observed) < min_length || length(observed) > max_length
       return -Inf

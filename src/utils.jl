@@ -30,7 +30,7 @@ end
 
 Like `normalize`, but in log-space and more numerically stable.
 """
-logprobs(proportions::Vector{Float64}) = begin
+function logprobs(proportions::AbstractVector{<:Real})
   l = log.(proportions)
   #l .- logsumexp(l)
 end

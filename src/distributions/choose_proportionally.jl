@@ -1,3 +1,8 @@
+"""
+  struct ChooseProportionally <: PCleanDistribution
+  
+A categorical distribution.
+"""
 struct ChooseProportionally <: PCleanDistribution end
 
 function random(::ChooseProportionally, options, probs::AbstractArray{T}) where T <: Real

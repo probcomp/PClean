@@ -6,7 +6,7 @@ has_discrete_proposal(::TimePrior) = true
 
 # Assume proposal_atoms are unique.
 function discrete_proposal(::TimePrior, proposal_atoms::Vector{String})
-  options = [proposal_atoms..., proposal_dummy_value]
+  options = [proposal_atoms..., PROPOSAL_DUMMY_VALUE]
   probs = map(x -> isnothing(match(r"^\d?\d:\d\d [ap]\.m\.$", x)) ? -Inf : -log(1440), proposal_atoms)
   total = logsumexp(probs)
   probs = [probs..., log1p(-exp(total))]

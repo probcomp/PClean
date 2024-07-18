@@ -7,10 +7,13 @@ include("load_data.jl")
 ##############
 const SPECIALITIES = possibilities["Primary specialty"]
 const CREDENTIALS = possibilities["Credential"]
+const SCHOOLS = possibilities["Medical school name"]
 
 PClean.@model PhysicianModel begin
   @class School begin
-    name ~ Unmodeled(); #@guaranteed name
+    # name ~ Unmodeled(); #@guaranteed name
+    @learned school_proportions::ProportionsParameter
+    name ~ ChooseProportionally(SCHOOLS, school_proportions); #@guaranteed name
   end
 
   @class Physician begin
@@ -65,8 +68,8 @@ query = @query PhysicianModel.Obs [
   "Organization legal name" a.legal_name
 ];
 
-observations = [ObservedDataset(query, all_data[1:300,:])]
-config = PClean.InferenceConfig(3, 2; use_mh_instead_of_pg=true)
+observations = [ObservedDataset(query, all_data[1:2000,:])]
+config = PClean.InferenceConfig(3, 3; use_mh_instead_of_pg=true)
 
 @time begin 
   trace = initialize_trace(observations, config);
@@ -75,28 +78,38 @@ end
 
 using Serialization
 serialize("results/physician.jls", trace.tables)
-table_ = deserialize("results/physician.jls")
+table_ = deserialize("results/physician___.jls")
 trace = PClean.PCleanTrace(PhysicianModel, table_);
-
 
 PClean.save_results("results", "physician", trace, observations)
 
 # INFERENCE CONTINUED
 row_trace = Dict{PClean.VertexID, Any}()
 # observed_city_addr = PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))] = "A T STILL UN, ARIZONA SCHL OF DENT.Y & ORAL HLTH"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "SALLY"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "FODERO"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "GR-038"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "655 PORTSMOUTH AVE"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))] = "ALBANY MEDICAL COLLEGE OF UNION UNIVERSITY"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "CA-170"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr2))] = ""
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = ""
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city_name))] = String31("LEXINGTON")
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.zip))] = String15("405043274")
 
-row_id = gensym()
+row_id = rand(10000:20000)
 obs = trace.tables[:Obs].observations
 obs[row_id] = row_trace
 
-PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(1,3))
-trace.tables[:Obs].rows[row_id]
+samples = String[]
+for _ in 1:2000
+  PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(20,3))
+  row = trace.tables[:Obs].rows[row_id]
+  push!(samples, row[PClean.resolve_dot_expression(trace.model, :Obs, :(p.specialty))])
+end
+count = Dict{String, Int}()
+for s in samples
+  count[s] = get(count, s, 0)+1
+end 
+l = collect(count)
+l[partialsortperm(l, 1:3, by=last, rev=true)]
+# println(trace.tables[:Obs].rows[row_id])

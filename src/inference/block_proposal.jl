@@ -101,6 +101,7 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
         foreign_key = state[foreign_key_node_id]
         target_table = state.trace.tables[strip_subnodes(class_model.nodes[foreign_key_node_id]).target_class]
         if !haskey(target_table.rows, foreign_key)
+            # println("Idx is ", idx)
             process_node!(node.subnode, idx)
         elseif !haskey(state, idx)
             chosen_row = target_table.rows[foreign_key]

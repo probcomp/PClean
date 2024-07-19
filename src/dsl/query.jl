@@ -12,6 +12,11 @@ function add_to_query!(query, symbol, clean, dirty)
     query.obsmap[symbol] = dirty_id
 end
 
+"""
+    macro query(model, columns)
+
+A macro to generate a PClean query using an object type...
+"""
 macro query(model, body)
     q = gensym("query")
 

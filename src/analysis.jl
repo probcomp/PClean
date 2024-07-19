@@ -22,15 +22,16 @@ function save_results(dir, name, trace, observed_datasets, timestamp=true)
     table_trace = trace.tables[class]
     data = dataset.data
 
-    tbldf = DataFrame(; [k => haskey(query.cleanmap, k) ?
-                                [table_trace.rows[i][query.cleanmap[k]]
-                                    for i in sort(collect(keys(table_trace.rows)))] :
-                                data[!, k]
-                            for k in propertynames(data)]...)
-    CSV.write("$dir/reconstructed_$class.csv", tbldf)
+    # tbldf = DataFrame(; [k => haskey(query.cleanmap, k) ?
+    #                             [table_trace.rows[i][query.cleanmap[k]]
+    #                                 for i in sort(collect(keys(table_trace.rows)))] :
+    #                             data[!, k]
+    #                         for k in propertynames(data)]...)
+    # CSV.write("$dir/reconstructed_$class.csv", tbldf)
   end
   save_tables(dir, trace)
 end
+
 
 
 function evaluate_accuracy(dirty_data, clean_data, table, query; verbose=false)

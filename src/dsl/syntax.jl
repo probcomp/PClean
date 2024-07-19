@@ -1,4 +1,5 @@
 using MacroTools
+export @model
 
 # There are various places in a PClean model where a Julia expression may
 # occur. For each Julia expression, we must resolve it to either:
@@ -103,12 +104,23 @@ function flatten_lines(lines)
     return flatlines
 end
 
+"""
+    @model model_name class_defs
+
+@model defines a PClean latent entity schema for `model_name` using the `class_defs`.
+
+A class definition consists of a name and additionally:
+- attributes
+- references to other classes
+- inference hints
+"""
 macro model(model_name, class_defs)
     class_defs = MacroTools.striplines(class_defs).args
     build_commands = Expr[]
-    # For each class
+
     for class_def in class_defs
         MacroTools.@capture(class_def, @class classname_ body_)
+        classname === nothing && error("Class name unspecified")
         lines = flatten_lines(body.args)
 
         names = Set{Symbol}()
@@ -154,9 +166,10 @@ macro model(model_name, class_defs)
         push!(build_commands, :(finish_class!(builder, $(Meta.quot(classname)))))
     end
     quote 
-        builder = PCleanModelBuilder(PCleanModel(Dict(), ClassID[]), closed)
+        builder = PCleanModelBuilder(PCleanModel(Dict(), ClassID[]), CLOSED)
         $(build_commands...)
         $(esc(model_name)) = finish_model!(builder)
+        $(esc(:what)) = builder
     end
 end
 

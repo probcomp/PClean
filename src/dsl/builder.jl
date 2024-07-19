@@ -6,19 +6,18 @@ using LightGraphs
 ############
 
 @enum BlockStatus begin
-    open   # all new nodes added to most recent block
-    closed # current block is over; next statement goes in new block
+    OPEN   # all new nodes added to most recent block
+    CLOSED # current block is over; next statement goes in new block
 end
 
-function begin_block!(b, class)
-    push!(b.model.classes[class].blocks, [])
-    b.block_status = open
+function begin_block!(builder, class)
+    push!(builder.model.classes[class].blocks, [])
+    builder.block_status = OPEN
 end
 
-function end_block!(b)
-    b.block_status = closed
+function end_block!(builder)
+    builder.block_status = CLOSED
 end
-
 
 
 """
@@ -166,11 +165,11 @@ function add_foreign_key!(b::PCleanModelBuilder, source_class::ClassID, name::Sy
     # Add newly created nodes to blocks.
     all_sampled_nodes = vcat([v], [filter(x -> x <= limit, map(x -> x + v, block)) for block in target_model.blocks]...)
 
-    if b.block_status == open
+    if b.block_status == OPEN
         push!(source_model.blocks[end], all_sampled_nodes...)
-    elseif b.block_status == closed
+    elseif b.block_status == CLOSED
         push!(source_model.blocks, all_sampled_nodes)
-        b.block_status = open
+        b.block_status = OPEN
     end
 end
 
@@ -222,9 +221,9 @@ function add_julia_node!(b::PCleanModelBuilder, class::ClassID, name::Symbol, ar
     push!(class_model.nodes, JuliaNode(f, arg_indices))
   
     # Place it in a block.
-    if b.block_status == closed
+    if b.block_status == CLOSED
         push!(class_model.blocks, [v])
-        b.block_status = open
+        b.block_status = OPEN
     else
         push!(class_model.blocks[end], v)
     end
@@ -249,11 +248,11 @@ function add_choice_node!(b::PCleanModelBuilder, class::ClassID, name::Symbol, d
     push!(class_model.nodes, RandomChoiceNode(dist, arg_indices))
   
     # Place it in a block.
-    if b.block_status == open
+    if b.block_status == OPEN
         push!(class_model.blocks[end], v)
-    elseif b.block_status == closed
+    elseif b.block_status == CLOSED
         push!(class_model.blocks, [v])
-        b.block_status = open
+        b.block_status = OPEN
     end
 end
 
@@ -377,7 +376,7 @@ end
 
 function finish_class!(b::PCleanModelBuilder, class::ClassID)
     process_references!(b.model, class)
-    b.block_status = closed
+    b.block_status = CLOSED
 end
 
 function finish_model!(b::PCleanModelBuilder)

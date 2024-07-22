@@ -25,9 +25,9 @@ PClean.@model PhysicianModel begin
     @learned specialty_proportions::Dict{String, ProportionsParameter{3.0}}
     npi ~ NumberCodePrior(); #@guaranteed npi
     first ~ Unmodeled()
-    # last ~ Unmodeled()
-    @learned last_name_proportions::ProportionsParameter{3.0}
-    last ~ ChooseProportionally(LASTNAMES, last_name_proportions)
+    last ~ Unmodeled()
+    # @learned last_name_proportions::ProportionsParameter{3.0}
+    # last ~ ChooseProportionally(LASTNAMES, last_name_proportions)
     school ~ School
     begin
       degree ~ ChooseProportionally(CREDENTIALS, degree_proportions[school.name])
@@ -116,7 +116,6 @@ function find_person(trace; firstname=nothing, lastname=nothing)
 end
 
 gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
-# find_person(trace,firstname="GILMAN")
 
 function find_spirit_service(trace)
   rows = trace.tables[:BusinessAddr].rows
@@ -152,7 +151,7 @@ specialty_samples = String[]
 last_name_samples = String[]
 physician_ids = Symbol[]
 for _ in 1:4
-  PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(10,3))
+  PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(20,3))
   # temp = find_spirit_service(trace)
   # display(temp)
   # business_addr_ids_different = symdiff(keys(spirit_service_instances), keys(temp))

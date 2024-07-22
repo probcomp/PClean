@@ -14,9 +14,8 @@ const LASTNAMES = possibilities["Last Name"]
 
 PClean.@model PhysicianModel begin
   @class School begin
-    name ~ Unmodeled(); #@guaranteed name
-    # @learned school_proportions::ProportionsParameter
-    # name ~ ChooseProportionally(SCHOOLS, school_proportions); #@guaranteed name
+    @learned school_proportions::ProportionsParameter
+    name ~ ChooseProportionally(SCHOOLS, school_proportions); #@guaranteed name
   end
 
   @class Physician begin
@@ -116,7 +115,7 @@ function find_person(trace; firstname=nothing, lastname=nothing)
 end
 
 gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
-# find_person(trace,firstname="GILMAN")
+# [row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
 
 function find_spirit_service(trace)
   rows = trace.tables[:BusinessAddr].rows
@@ -132,10 +131,9 @@ spirit_service_instances = find_spirit_service(trace)
 row_id = rand(10000:20000)
 
 row_trace = Dict{PClean.VertexID, Any}()
-# observed_city_addr = PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))] = "ALBANY MEDICAL COLLEGE OF UNION UNIVERSITY"
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
-# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))] = "ALBANY MEDICAL COLLEGE OF UNION UNIVERSITY"
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "CA-170"
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr2))] = ""
@@ -151,18 +149,18 @@ obs[row_id] = row_trace
 specialty_samples = String[]
 last_name_samples = String[]
 physician_ids = Symbol[]
-for _ in 1:4
-  PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(10,3))
+for _ in 1:10
+  PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(30,5))
   # temp = find_spirit_service(trace)
   # display(temp)
   # business_addr_ids_different = symdiff(keys(spirit_service_instances), keys(temp))
   # println(business_addr_ids_different)
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :a)])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :a)])
   println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))])
   println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :p)])
   println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))])
   println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.specialty))])
+  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))])
   println()
   # push!(last_name_samples, row[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))])
 end

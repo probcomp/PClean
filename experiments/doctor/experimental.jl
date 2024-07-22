@@ -122,7 +122,7 @@ function find_person(trace; firstname=nothing, lastname=nothing)
   filter(f, trace.tables[:Physician].rows)
 end
 
-gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
+# gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
 # [row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
 
 function find_spirit_service(trace)
@@ -134,8 +134,10 @@ function find_spirit_service(trace)
   end
   filter(is_spirit, rows)
 end
-spirit_service_instances = find_spirit_service(trace)
+# spirit_service_instances = find_spirit_service(trace)
 # INFERENCE CONTINUED
+table = deserialize("results/physician.jls")
+trace = PClean.PCleanTrace(PhysicianModel, table);
 row_id = rand(10000:20000)
 
 row_trace = Dict{PClean.VertexID, Any}()
@@ -155,7 +157,7 @@ obs = trace.tables[:Obs].observations
 obs[row_id] = row_trace
 
 samples = Dict{Int64,Any}[]
-for _ in 1:10
+for _ in 1:100
   PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(40,5))
   push!(samples, copy(trace.tables[:Obs].rows[row_id]))
   # temp = find_spirit_service(trace)
@@ -163,21 +165,21 @@ for _ in 1:10
   # business_addr_ids_different = symdiff(keys(spirit_service_instances), keys(temp))
   # println(business_addr_ids_different)
   # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :a)])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :a)])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :p)])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))])
-  println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))])
-  println()
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :a)])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :p)])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))])
+  # println(trace.tables[:Obs].rows[row_id][PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))])
+  # println()
   # push!(last_name_samples, row[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))])
 end
-gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
-PClean.save_results("results", "physician", trace, observations)
+# gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
+# PClean.save_results("results", "physician", trace, observations)
 
-[row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
+# [row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
 
 function attribute_extractors(model::PClean.PCleanModel)
     physician_attributes = Dict(
@@ -209,10 +211,7 @@ function attribute_extractors(model::PClean.PCleanModel)
 end
 
 extractor = attribute_extractors(PhysicianModel)
-# sum(extractor(s)[1] in existing_physicians for s in samples)
-extractor(samples[5])
-ob = extractor(samples[5])[1]
-ob in existing_observations
+results = filter(x->x[1] in existing_observations, extractor.(samples))
 # extractor(samples[1])[1] in existing_physicians
 
 # p_freq = countmap(physician_ids)

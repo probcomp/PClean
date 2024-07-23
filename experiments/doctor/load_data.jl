@@ -1,6 +1,6 @@
 using CSV
 using DataFrames
-all_data = CSV.File("datasets/physician_full.csv") |> DataFrame
+all_data = CSV.File("datasets/physician_clean.csv") |> DataFrame
 
 # Get cities per City2Zip3
 all_data = all_data[:, :]

@@ -9,4 +9,5 @@ Manifest.toml
 scratch.jl
 models
 .vscode
-datasets/physician_full.csv
+datasets/physician_clean.csv
+datasets/physician_dirty.csv

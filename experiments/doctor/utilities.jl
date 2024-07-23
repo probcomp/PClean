@@ -1,3 +1,49 @@
+function histograms(results)
+  physicians = Dict{Symbol, Int}()
+  businesses = Dict{Symbol, Int}()
+  for r in results
+    physician_id = first(r[1])
+    if !(physician_id in keys(physicians))
+      physicians[physician_id] = 0
+    end
+    physicians[physician_id]+=1
+
+    business_id = last(r[1])
+    if !(business_id in keys(businesses))
+      businesses[business_id] = 0
+    end
+    businesses[business_id]+=1
+  end
+  physicians, businesses
+end
+
+function find_person(trace; firstname=nothing, lastname=nothing)
+  firstname === nothing && lastname === nothing && error("Specify at least first or last")
+  first_id = PClean.resolve_dot_expression(trace.model, :Physician, :first)
+  last_id = PClean.resolve_dot_expression(trace.model, :Physician, :last)
+  function f(pair)
+    row = last(pair)
+    if lastname === nothing
+      return row[first_id] == firstname
+    elseif firstname === nothing
+      return row[last_id] == lastname
+    else
+      return row[first_id] == firstname && row[last_id] == lastname
+    end
+  end
+  filter(f, trace.tables[:Physician].rows)
+end
+
+function find_spirit_service(trace)
+  rows = trace.tables[:BusinessAddr].rows
+  city_name_id = PClean.resolve_dot_expression(trace.model, :BusinessAddr, :legal_name)
+  function is_spirit(pair)
+    row = last(pair) 
+    row[city_name_id] == "SPIRIT PHYSICIAN SERVICES INC"
+  end
+  filter(is_spirit, rows)
+end
+
 function attribute_extractors(model::PClean.PCleanModel)
     physician_attributes = Dict(
       "npi"=>PClean.resolve_dot_expression(model, :Obs, :(p.npi)),

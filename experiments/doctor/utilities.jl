@@ -34,6 +34,33 @@ function find_person(trace; firstname=nothing, lastname=nothing)
   filter(f, trace.tables[:Physician].rows)
 end
 
+function find_business(trace, physician_id::Symbol)
+  p_id = PClean.resolve_dot_expression(trace.model, :Obs, :p)
+  b_id = PClean.resolve_dot_expression(trace.model, :Obs, :a)
+  function f(pair)
+    row = last(pair)
+    return row[p_id] == physician_id
+  end
+  obs_rows = filter(f, trace.tables[:Obs].rows)
+  # function m(pair)
+  #   row = last(pair)
+  #   b_ident = row[b_id]
+  #   b_ident => trace.tables[:BusinessAddr].rows[b_ident]
+  # end
+end
+
+function business_name(data)
+  id = PClean.resolve_dot_expression(PhysicianModel, :BusinessAddr, :legal_name)
+  data[id]
+end
+
+function physician_name(data)
+  first_id = PClean.resolve_dot_expression(PhysicianModel, :Physician, :first)
+  last_id = PClean.resolve_dot_expression(PhysicianModel, :Physician, :last)
+  data[first_id], data[last_id]
+end
+
+
 function find_spirit_service(trace)
   rows = trace.tables[:BusinessAddr].rows
   city_name_id = PClean.resolve_dot_expression(trace.model, :BusinessAddr, :legal_name)
@@ -71,4 +98,10 @@ function attribute_extractors(model::PClean.PCleanModel)
     end
 
     return attributes
+end
+
+function build_response(samples)
+  p_hist, a_hist = histograms(samples)
+  data = unique(x->x[1], samples)
+  data, p_hist, a_hist
 end

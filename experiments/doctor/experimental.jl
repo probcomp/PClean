@@ -120,12 +120,16 @@ trace = PClean.PCleanTrace(PhysicianModel, table);
 
 row_id = rand(10000:20000)
 row_trace = Dict{PClean.VertexID, Any}()
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "JOHN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GAVIN"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "CA-170"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "123 EVERETT RD"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr2))] = ""
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "ALBANY ENT AND ALLERGY SERVICES PC"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.zip))] = String15("170112202")
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.degree))] = "MD"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.degree_obs))] = "MD"
@@ -140,63 +144,16 @@ samples = []
 for _ in 1:1000
   PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(40,5))
   r_ = copy(trace.tables[:Obs].rows[row_id])
-  # println(extractor(r_))
-  # println(r_[])
   info = extractor(r_)
   if info[1] in existing_observations
     push!(samples, extractor(r_))
   end
 end
-# gilmans = find_person(trace,firstname="STEVEN", lastname="GILMAN")
-# PClean.save_results("results", "physician", trace, observations)
-
-# [row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
-
-
-
-function histograms(results)
-  physicians = Dict{Symbol, Int}()
-  businesses = Dict{Symbol, Int}()
-  for r in results
-    physician_id = first(r[1])
-    if !(physician_id in keys(physicians))
-      physicians[physician_id] = 0
-    end
-    physicians[physician_id]+=1
-
-    business_id = last(r[1])
-    if !(business_id in keys(businesses))
-      businesses[business_id] = 0
-    end
-    businesses[business_id]+=1
-  end
-  physicians, businesses
-end
 
 histograms(samples)
-# extractor(samples[1])[1] in existing_physicians
+build_response(samples)[1]
 
-# p_freq = countmap(physician_ids)
-# gilman in keys(p_freq)
-
-# specialty_freq = countmap(specialty_samples);
-# l  = collect(specialty_freq);
-# l[partialsortperm(l, 1:3, by=last, rev=true)]
-
-# last_freq = countmap(last_name_samples);
-# l  = collect(last_freq);
-# l[partialsortperm(l, 1:3, by=last, rev=true)]
-
-# println(trace.tables[:Obs].rows[row_id])
-
-# trace.tables[:Obs].rows[row_id][1] # physician foreign key
-# trace.tables[:Obs].rows[row_id][8] # school foreign key
-# trace.tables[:Obs].rows[row_id][18] # business foreign key
-# trace.tables[:Obs].rows[row_id][26] # city foreign key
-
-# PClean.resolve_dot_expression(trace.model, :Obs, :(p))
-# PClean.resolve_dot_expression(trace.model, :Obs, :(p.school))
-# PClean.resolve_dot_expression(trace.model, :Obs, :a)
-# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-
-
+johns = find_person(trace, firstname="JOHN")
+john_id = rand(keys(johns))
+physician_name(johns[john_id])
+john_businesses = extractor.(values(find_business(trace, john_id)))

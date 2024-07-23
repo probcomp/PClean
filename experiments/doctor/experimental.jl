@@ -10,8 +10,11 @@ const SPECIALITIES = possibilities["Primary specialty"]
 const CREDENTIALS = possibilities["Credential"]
 const SCHOOLS = possibilities["Medical school name"]
 const BUSINESSES = possibilities["Organization legal name"]
+const FIRSTNAMES = possibilities["First Name"]
 const LASTNAMES = possibilities["Last Name"]
 const ADDRS = possibilities["Line 1 Street Address"]
+const ADDRS2 = possibilities["Line 2 Street Address"]
+const CITIES = possibilities["City"]
 
 PClean.@model PhysicianModel begin
   @class School begin
@@ -23,10 +26,11 @@ PClean.@model PhysicianModel begin
     @learned error_prob::ProbParameter{1.0, 1000.0}
     @learned degree_proportions::Dict{String, ProportionsParameter{3.0}}
     @learned specialty_proportions::Dict{String, ProportionsParameter{3.0}}
-    npi ~ NumberCodePrior(); #@guaranteed npi
-    first ~ Unmodeled()
-    # last ~ Unmodeled()
+    @learned first_name_proportions::ProportionsParameter{3.0}
     @learned last_name_proportions::ProportionsParameter{3.0}
+
+    npi ~ NumberCodePrior(); #@guaranteed npi
+    first ~ ChooseProportionally(FIRSTNAMES, first_name_proportions)
     last ~ ChooseProportionally(LASTNAMES, last_name_proportions)
     school ~ School
     begin
@@ -37,19 +41,21 @@ PClean.@model PhysicianModel begin
   end
 
   @class City begin
-    c2z3 ~ Unmodeled(); #@guaranteed c2z3
-    name ~ StringPrior(3, 30, cities[c2z3])
+    # c2z3 ~ Unmodeled(); #@guaranteed c2z3
+    # name ~ StringPrior(3, 30, cities[c2z3])
+    @learned city_proportions::ProportionsParameter{3.0}
+    name ~ ChooseProportionally(CITIES, city_proportions)
   end
 
   @class BusinessAddr begin
     @learned addr_proportions::ProportionsParameter{3.0}
+    @learned addr2_proportions::ProportionsParameter{3.0}
+    @learned legal_name_proportions::ProportionsParameter{3.0}
     addr ~ ChooseProportionally(ADDRS, addr_proportions)
-    # addr ~ Unmodeled(); #@guaranteed addr
-
-    addr2 ~ Unmodeled(); #@guaranteed addr2
+    addr2 ~ ChooseProportionally(ADDRS2, addr2_proportions)
     zip ~ StringPrior(3, 10, String[]); #@guaranteed zip
 
-    legal_name ~ Unmodeled(); #@guaranteed legal_name
+    legal_name ~ ChooseProportionally(BUSINESSES, legal_name_proportions)
     begin
       city ~ City
       city_name ~ AddTypos(city.name, 2)
@@ -69,7 +75,6 @@ query = @query PhysicianModel.Obs [
   "Last Name" p.last
   "Medical school name" p.school.name
   "Credential" p.degree p.degree_obs
-  "City2Zip3" a.city.c2z3
   "City" a.city.name a.city_name
   "Line 1 Street Address" a.addr
   "Line 2 Street Address" a.addr2
@@ -100,6 +105,7 @@ trace = PClean.PCleanTrace(PhysicianModel, table);
 
 PClean.save_results("results", "physician", trace, observations)
 
+include("utilities.jl")
 existing_physicians = keys(trace.tables[:Physician].rows)
 existing_businesses = keys(trace.tables[:BusinessAddr].rows) 
 existing_observations = Set([(row[PClean.resolve_dot_expression(trace.model,:Obs, :p)], row[PClean.resolve_dot_expression(trace.model, :Obs, :a)]) for (id, row) in trace.tables[:Obs].rows])
@@ -138,28 +144,33 @@ end
 # INFERENCE CONTINUED
 table = deserialize("results/physician.jls")
 trace = PClean.PCleanTrace(PhysicianModel, table);
-row_id = rand(10000:20000)
 
+row_id = rand(10000:20000)
 row_trace = Dict{PClean.VertexID, Any}()
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
-# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
-# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.school.name))] = "ALBANY MEDICAL COLLEGE OF UNION UNIVERSITY"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "CA-170"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.c2z3))] = "CA-170"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr2))] = ""
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr2))] = ""
 row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.zip))] = String15("170112202")
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.zip))] = String15("170112202")
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.degree))] = "MD"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.degree_obs))] = "MD"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.specialty))] = "DIAGNOSTIC RADIOLOGY"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.specialty))] = "DIAGNOSTIC RADIOLOGY"
 
 obs = trace.tables[:Obs].observations
 obs[row_id] = row_trace
 
-samples = Dict{Int64,Any}[]
-for _ in 1:100
+extractor = attribute_extractors(PhysicianModel)
+# results = filter(x->x[1] in existing_observations, extractor.(samples))
+samples = []
+for _ in 1:1000
   PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(40,5))
-  push!(samples, copy(trace.tables[:Obs].rows[row_id]))
+  r_ = copy(trace.tables[:Obs].rows[row_id])
+  info = extractor(r_)
+  if info[1] in existing_observations
+    push!(samples, extractor(r_))
+  end
   # temp = find_spirit_service(trace)
   # display(temp)
   # business_addr_ids_different = symdiff(keys(spirit_service_instances), keys(temp))
@@ -181,37 +192,28 @@ end
 
 # [row[PClean.resolve_dot_expression(trace.model, :Physician, :last)] for (id, row) in find_person(trace,firstname="STEVEN")]
 
-function attribute_extractors(model::PClean.PCleanModel)
-    physician_attributes = Dict(
-      "npi"=>PClean.resolve_dot_expression(model, :Obs, :(p.npi)),
-      "first"=>PClean.resolve_dot_expression(model, :Obs, :(p.first)),
-      "last"=>PClean.resolve_dot_expression(model, :Obs, :(p.last)),
-      "degree"=>PClean.resolve_dot_expression(model, :Obs, :(p.degree)),
-      "speciality"=>PClean.resolve_dot_expression(model, :Obs, :(p.specialty)),
-      "school" => PClean.resolve_dot_expression(model, :Obs, :(p.school.name))
-    )
 
-    business_attributes = Dict(
-      "legal_name" => PClean.resolve_dot_expression(model, :Obs, :(a.legal_name)),
-      "addr" => PClean.resolve_dot_expression(model, :Obs, :(a.addr)),
-      "addr2" => PClean.resolve_dot_expression(model, :Obs, :(a.addr2)),
-      "zip" => PClean.resolve_dot_expression(model, :Obs, :(a.zip)),
-      "city" => PClean.resolve_dot_expression(model, :Obs, :(a.city.name)),
-    )
 
-    function attributes(row)
-      physician_attr = Dict(attribute=>row[id] for (attribute, id) in physician_attributes)
-      business_attr = Dict(attribute=>row[id] for (attribute, id) in business_attributes)
-      physician_id = row[PClean.resolve_dot_expression(model, :Obs, :p)]
-      business_id = row[PClean.resolve_dot_expression(model, :Obs, :a)]
-      return (physician_id, business_id), physician_attr, business_attr
+function histograms(results)
+  physicians = Dict{Symbol, Int}()
+  businesses = Dict{Symbol, Int}()
+  for r in results
+    physician_id = first(r[1])
+    if !(physician_id in keys(physicians))
+      physicians[physician_id] = 0
     end
+    physicians[physician_id]+=1
 
-    return attributes
+    business_id = last(r[1])
+    if !(business_id in keys(businesses))
+      businesses[business_id] = 0
+    end
+    businesses[business_id]+=1
+  end
+  physicians, businesses
 end
 
-extractor = attribute_extractors(PhysicianModel)
-results = filter(x->x[1] in existing_observations, extractor.(samples))
+histograms(samples)
 # extractor(samples[1])[1] in existing_physicians
 
 # p_freq = countmap(physician_ids)

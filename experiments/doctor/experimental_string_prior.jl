@@ -7,6 +7,8 @@ include("load_data.jl")
 ##############
 # PHYSICIANS #
 ##############
+serialize("results/possibilities.jls", possibilities)
+possibilities = deserialize("results/possibilities.jls")
 const SPECIALITIES = possibilities["Primary specialty"]
 const CREDENTIALS = possibilities["Credential"]
 const SCHOOLS = possibilities["Medical school name"]
@@ -106,28 +108,6 @@ query = @query PhysicianModel.Obs [
 
 observations = [ObservedDataset(query, all_data[:, :])]
 config = PClean.InferenceConfig(2, 2; use_mh_instead_of_pg = true)
-
-# 24 = business addrs class
-# (obs) 37 = city class = (business) 13
-# SubmodelNode(24, 15) = indx of this node + 
-
-# fieldnames(typeof(trace.model.classes[:Obs]))
-# PhysicianModel.classes[:Obs].names
-# PhysicianModel.classes[:Obs].nodes[12]
-# PhysicianModel.classes[:Obs].nodes[24]
-# PhysicianModel.classes[:Obs].nodes[37]
-# PhysicianModel.classes[:Obs].nodes[38]
-# PhysicianModel.classes[:Obs].nodes[39]
-# PhysicianModel.classes[:Obs].nodes[42]
-# for (i,n) in enumerate(PhysicianModel.classes[:BusinessAddr].nodes)
-#     println("idx $i")
-#     println(n)
-#     println()
-# end
-# trace.model.classes[:ty].nodes[2].f()
-# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.city_proportions))
-# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))
 
 @time begin
     trace = initialize_trace(observations, config)

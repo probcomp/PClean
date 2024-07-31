@@ -18,7 +18,7 @@ const ADDRS2 = possibilities["Line 2 Street Address"]
 const CITIES = possibilities["City"]
 const ZIPS = possibilities["Zip Code"]
 
-PClean.@model PhysicianMode begin
+PClean.@model PhysicianModel begin
     @class School begin
         @learned school_proportions::ProportionsParameter{2.0}
         name ~ ChooseProportionally(SCHOOLS, school_proportions) 
@@ -63,9 +63,13 @@ PClean.@model PhysicianMode begin
         end
     end
 
-    @class Obs begin
+    @class EmploymentRecord begin
         p ~ Physician
         a ~ BusinessAddr
+    end
+
+    @class Obs begin
+        record ~ EmploymentRecord
     end
 end;
 
@@ -73,19 +77,32 @@ end;
         # zip ~ StringPrior(9,10, zippy)
         # legal_name ~ ChooseProportionally(BUSINESSES, legal_name_proportions)
         # @learned legal_name_proportions::ProportionsParameter{3.0}
-query = @query PhysicianMode.Obs [
-    "NPI" p.npi
-    "Primary specialty" p.specialty
-    "First Name" p.first
-    "Last Name" p.last
-    "Medical school name" p.school.name
-    "Credential" p.degree p.degree_obs
-    "City" a.city.name a.city_name
-    "Line 1 Street Address" a.addr
-    "Line 2 Street Address" a.addr2
-    "Zip Code" a.zip
-    "Organization legal name" a.legal_name
+query = @query PhysicianModel.Obs [
+    "NPI" record.p.npi
+    "Primary specialty" record.p.specialty
+    "First Name" record.p.first
+    "Last Name" record.p.last
+    "Medical school name" record.p.school.name
+    "Credential" record.p.degree record.p.degree_obs
+    "City" record.a.city.name record.a.city_name
+    "Line 1 Street Address" record.a.addr
+    "Line 2 Street Address" record.a.addr2
+    "Zip Code" record.a.zip
+    "Organization legal name" record.a.legal_name
 ];
+# query = @query PhysicianModel.Obs [
+#     "NPI" p.npi
+#     "Primary specialty" p.specialty
+#     "First Name" p.first
+#     "Last Name" p.last
+#     "Medical school name" p.school.name
+#     "Credential" p.degree p.degree_obs
+#     "City" a.city.name a.city_name
+#     "Line 1 Street Address" a.addr
+#     "Line 2 Street Address" a.addr2
+#     "Zip Code" a.zip
+#     "Organization legal name" a.legal_name
+# ];
 
 observations = [ObservedDataset(query, all_data[:, :])]
 config = PClean.InferenceConfig(2, 2; use_mh_instead_of_pg = true)
@@ -94,29 +111,24 @@ config = PClean.InferenceConfig(2, 2; use_mh_instead_of_pg = true)
 # (obs) 37 = city class = (business) 13
 # SubmodelNode(24, 15) = indx of this node + 
 
-fieldnames(typeof(trace.model.classes[:Obs]))
-PhysicianModel.classes[:Obs].names
-PhysicianModel.classes[:Obs].nodes[12]
-PhysicianModel.classes[:Obs].nodes[24]
-PhysicianModel.classes[:Obs].nodes[37]
-PhysicianModel.classes[:Obs].nodes[38]
-PhysicianModel.classes[:Obs].nodes[39]
-PhysicianModel.classes[:Obs].nodes[42]
-for (i,n) in enumerate(PhysicianModel.classes[:BusinessAddr].nodes)
-    println("idx $i")
-    println(n)
-    println()
-end
-trace.model.classes[:ty].nodes[2].f()
-PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.city_proportions))
-PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))
-
-# function Base.:+(x::String, y::Int)
-#     println("PLUS")
-#     println("String ", x)
-#     println("Integer ", y)
+# fieldnames(typeof(trace.model.classes[:Obs]))
+# PhysicianModel.classes[:Obs].names
+# PhysicianModel.classes[:Obs].nodes[12]
+# PhysicianModel.classes[:Obs].nodes[24]
+# PhysicianModel.classes[:Obs].nodes[37]
+# PhysicianModel.classes[:Obs].nodes[38]
+# PhysicianModel.classes[:Obs].nodes[39]
+# PhysicianModel.classes[:Obs].nodes[42]
+# for (i,n) in enumerate(PhysicianModel.classes[:BusinessAddr].nodes)
+#     println("idx $i")
+#     println(n)
+#     println()
 # end
+# trace.model.classes[:ty].nodes[2].f()
+# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
+# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.city_proportions))
+# PClean.resolve_dot_expression(trace.model, :Obs, :(a.city.name))
+
 @time begin
     trace = initialize_trace(observations, config)
     run_inference!(trace, config)
@@ -124,7 +136,7 @@ end
 
 # publish_tables(possibilities, trace.tables)
 serialize("results/physician.jls", trace.tables)
-table = deserialize("results/physician_big.jls")
+table = deserialize("results/physician.jls")
 trace = PClean.PCleanTrace(PhysicianModel, table);
 
 PClean.save_results("results", "physician", trace, observations)
@@ -133,8 +145,10 @@ existing_physicians = keys(trace.tables[:Physician].rows)
 existing_businesses = keys(trace.tables[:BusinessAddr].rows)
 existing_observations = Set([
     (
-        row[PClean.resolve_dot_expression(trace.model, :Obs, :p)],
-        row[PClean.resolve_dot_expression(trace.model, :Obs, :a)],
+        row[PClean.resolve_dot_expression(trace.model, :Obs, :(record.p))],
+        # row[PClean.resolve_dot_expression(trace.model, :Obs, :(p))],
+        row[PClean.resolve_dot_expression(trace.model, :Obs, :(record.a))],
+        # row[PClean.resolve_dot_expression(trace.model, :Obs, :(a))],
     ) for (id, row) in trace.tables[:Obs].rows
 ])
 
@@ -144,14 +158,14 @@ existing_observations = Set([
 
 # INFERENCE CONTINUED
 table = deserialize("results/physician.jls")
-trace = PClean.PCleanTrace(PhysicianMode, table);
+trace = PClean.PCleanTrace(PhysicianModel, table);
 
 row_id = rand(10000:20000)
 row_trace = Dict{PClean.VertexID,Any}()
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(record.p.first))] = "STEVEN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city_name))] = "CAMP HILL"
-# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
+# row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(record.a.city_name))] = "CAMP HILL"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(record.a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
@@ -165,18 +179,25 @@ row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.city_name))] = "C
 obs = trace.tables[:Obs].observations
 obs[row_id] = row_trace
 
-extractor = attribute_extractors(PhysicianMode)
+extractor = attribute_extractors(PhysicianModel)
 # results = filter(x->x[1] in existing_observations, extractor.(samples))
+
+
+trace.tables[:BusinessAddr].pitman_yor_params.discount = 0.90
+trace.tables[:Physician].pitman_yor_params.discount = 0.90
+trace.tables[:Obs].pitman_yor_params.discount = 0.90
+trace.tables[:EmploymentRecord].pitman_yor_params.discount = 0.90
+trace.tables[:School].pitman_yor_params.discount = 0.90
+trace.tables[:City].pitman_yor_params.discount = 0.90
 samples = []
 non_samples = []
-
-
-for _ = 1:10
+businesses = []
+for _ = 1:1000
     try
         PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(20, 5))
         r_ = copy(trace.tables[:Obs].rows[row_id])
-        city_id = PClean.resolve_dot_expression(trace.model, :Obs, :(a.city))
-        println("City ", trace.tables[:Obs].rows[row_id][city_id])
+        city_id = PClean.resolve_dot_expression(trace.model, :Obs, :(record.a.city))
+        # println("City ", trace.tables[:Obs].rows[row_id][city_id])
         # println(extractor(r_))
         info = extractor(r_)
         p_id = info[1]
@@ -185,6 +206,9 @@ for _ = 1:10
           push!(samples, extractor(r_))
         else
             push!(non_samples, extractor(r_))
+        end
+        if b_id in existing_businesses
+            push!(businesses, b_id)
         end
         # if info[1][1] in existing_physicians
         #   push!(p_samples, etractor(r_))

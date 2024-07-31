@@ -16,9 +16,9 @@ all_data =
         if ismissing(x[Symbol("Line 2 Street Address")])
             x[Symbol("Line 2 Street Address")] = ""
         end
-        if ismissing(x[Symbol("Organization legal name")])
-            x[Symbol("Organization legal name")] = ""
-        end
+        # if ismissing(x[Symbol("Organization legal name")])
+        #     x[Symbol("Organization legal name")] = ""
+        # end
         return x
     end, eachrow(all_data)) |> DataFrame
 

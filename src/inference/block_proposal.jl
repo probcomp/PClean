@@ -101,7 +101,6 @@ function propose_non_enumerable!(vertex_order::Vector{VertexID}, state::Proposal
         foreign_key = state[foreign_key_node_id]
         target_table = state.trace.tables[strip_subnodes(class_model.nodes[foreign_key_node_id]).target_class]
         if !haskey(target_table.rows, foreign_key)
-            # println("Idx is ", idx)
             process_node!(node.subnode, idx)
         elseif !haskey(state, idx)
             chosen_row = target_table.rows[foreign_key]
@@ -187,6 +186,5 @@ function make_block_proposal!(state::ProposalRowState, block_index::Int, config:
     # Evaluates `q` for all such choices, and also `p` for the entire proposal.
     p, q_cont = propose_non_enumerable!(block_vertices, state)
     
-    #println("Components: p=$p, q_disc=$q_disc, q_cont=$q_cont")
     return state, p - q_disc - q_cont
 end

@@ -75,6 +75,10 @@ end
 function resample_value!(p::ProportionsParameter)
   num_options = length(p.current_value)
   dirichlet_prior = dirichlet_concentrations(p.prior, num_options)
+  # println("p current value ", p.current_value)
+  # println("num options ", num_options)
+  # println("p prior ", p.prior)
+  # println("dirichlet prior ", dirichlet_prior)
   copy!(p.current_value, rand(Dirichlet(dirichlet_prior .+ p.sample_counts)))
 end
 

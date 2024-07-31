@@ -133,6 +133,7 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         learned_table_var = gensym("learned_table")
         variable_names[node.target_class] = learned_table_var
         push!(initialization_statements, :($learned_table_var = $state_var.trace.tables[$(Meta.quot(node.target_class))]))
+        # println("processing $node, idx $idx")
 
         # Determine valid keys for enumeration
         # We actually know at compile-time whether it will be possible to hash,
@@ -150,6 +151,7 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
             push!(initialization_statements, :($keys_to_check_var = collect(keys($learned_table_var.rows))))
         end
         num_to_check_var = gensym("num_to_check")
+        # push!(initialization_statements, :(println("key_to_check_var ", $keys_to_check_var)))
         push!(initialization_statements, :($num_to_check_var = length($keys_to_check_var)))
         #push!(initialization_statements, :(print("Num to check is: "); println($num_to_check_var)))
         # We can materialize an array of prior probabilities (Pitman-Yor)
@@ -208,6 +210,8 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         process_plan!(plan, for_loop_body, prob_output_var, trace_output_var, q_output_var)
         delete!(active_child_traces, idx)
         # # Add to lists
+        # push!(for_loop_body, :(println("[iter_var ", $iter_var, " ] [prob_output_var ", $prob_output_var, "]")))
+        # push!(for_loop_body, :(println("[py_prior ", $py_prior_logprobs_var[$iter_var] + "]")))
         push!(for_loop_body, :(push!($prob_list_var, $prob_output_var + $py_prior_logprobs_var[$iter_var])))
         push!(for_loop_body, :(push!($trace_list_var, $trace_output_var)))
         push!(for_loop_body, :(push!($q_list_var, $q_output_var)))
@@ -216,6 +220,7 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         # TODO: This isempty check is not necessary to do dynamically; it should be known,
         # based on whether there are any ForeignKeyNode or RandomChoiceNodes yet to come.
         push!(for_loop_body, :(if !isempty($trace_output_var); $trace_output_var = Dict{Int, Any}(); end))
+        # push!(body_statements, :(println("num_to_check_var ", $num_to_check_var)))
         push!(body_statements, :(for $iter_var in 1:$num_to_check_var; $(for_loop_body...); end))
 
         # Before sampling, do blind generation.
@@ -225,6 +230,9 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         push!(body_statements, :($fk_var_name = $keys_to_check_var[end]))
         push!(body_statements, :(if $fk_var_name == $retained_value_var; $chosen_index_var = $num_to_check_var + 1; end))
         process_plan!(plan, body_statements, prob_output_var, trace_output_var, q_output_var)
+        # push!(body_statements, :(println("prob_output_var ", $prob_output_var)))
+        # push!(body_statements, :(println("pyprior_logprob ", $py_prior_logprobs_var)))
+        # push!(body_statements, :(println("pyprior_logprob[end]", $py_prior_logprobs_var[end])))
         push!(body_statements, :(push!($prob_list_var, $prob_output_var + $py_prior_logprobs_var[end])))
         push!(body_statements, :(push!($trace_list_var, $trace_output_var)))
         push!(body_statements, :(push!($q_list_var, $q_output_var)))
@@ -233,6 +241,11 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
         push!(body_statements, quote
             $prob_output_var = PClean.logsumexp($prob_list_var)
             $prob_list_var .-= $prob_output_var
+            # println($prob_list_var)
+            # println($trace_list_var)
+            # println($idx)
+            # println($keys_to_check_var)
+
             if $chosen_index_var == 0
                 $chosen_index_var = Distributions.rand(Distributions.Categorical(exp.($prob_list_var)))
             end
@@ -286,6 +299,7 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
                     $prob_output_var = -Inf
                     $q_output_var = -Inf
                 else
+                    # println($rest_of_plan)
                     $(rest_of_plan...)
                 end
             end)
@@ -380,6 +394,8 @@ function generate_code(model::PCleanModel, class::ClassID, plan::Plan, observati
             push!(body_statements, :($p_var = 0.0))
             push!(body_statements, :($(tp_var) = 0.0))
             process_step!(step, body_statements, p_var, t_var, tp_var)
+            # push!(body_statements, :(println("First plus prob_output_var ", $prob_output_var , " p_var ", $p_var, )))
+            # push!(body_statements, :(println("Second plus q_output_var ", $q_output_var , " tp_var ", $tp_var, )))
             push!(body_statements, :($prob_output_var += $p_var))
             push!(body_statements, :($q_output_var += $tp_var))
             push!(body_statements, :(merge!($trace_output_var, $t_var)))

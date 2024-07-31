@@ -43,19 +43,20 @@ PClean.@model PhysicianModel begin
     end
 
     @class City begin
-        @learned city_proportions::ProportionsParameter{3.0}
+        @learned city_proportions::ProportionsParameter{1.0}
         name ~ ChooseProportionally(CITIES, city_proportions)
     end
 
     @class BusinessAddr begin
-        @learned addr_proportions::ProportionsParameter{3.0}
-        @learned addr2_proportions::ProportionsParameter{3.0}
-        @learned legal_name_proportions::ProportionsParameter{3.0}
+        @learned addr_proportions::ProportionsParameter{1.0}
+        @learned addr2_proportions::ProportionsParameter{1.0}
+        # @learned legal_name_proportions::ProportionsParameter{3.0}
         @learned zip_proportions::ProportionsParameter{3.0}
         addr ~ ChooseProportionally(ADDRS, addr_proportions)
         addr2 ~ ChooseProportionally(ADDRS2, addr2_proportions)
         zip ~ ChooseProportionally(ZIPS, zip_proportions)
-        legal_name ~ ChooseProportionally(BUSINESSES, legal_name_proportions)
+        # legal_name ~ ChooseProportionally(BUSINESSES, legal_name_proportions)
+        legal_name ~ StringPrior(1,71, BUSINESSES)
 
         begin
             city ~ City
@@ -84,8 +85,8 @@ query = @query PhysicianModel.Obs [
     "Organization legal name" a.legal_name
 ];
 
-observations = [ObservedDataset(query, all_data[1:1000, :])]
-config = PClean.InferenceConfig(5, 5; use_mh_instead_of_pg = true)
+observations = [ObservedDataset(query, all_data[:, :])]
+config = PClean.InferenceConfig(5, 3; use_mh_instead_of_pg = true)
 
 @time begin
     trace = initialize_trace(observations, config)
@@ -94,10 +95,10 @@ end
 
 # publish_tables(possibilities, trace.tables)
 serialize("results/physician.jls", trace.tables)
-table = deserialize("results/physician.jls")
+table = deserialize("results/physician_big.jls")
 trace = PClean.PCleanTrace(PhysicianModel, table);
 
-PClean.save_results("results", "physician", trace, observations)
+PClean.save_results("results", "physician_big", trace, observations)
 
 existing_physicians = keys(trace.tables[:Physician].rows)
 existing_businesses = keys(trace.tables[:BusinessAddr].rows)
@@ -113,18 +114,18 @@ existing_observations = Set([
 # spirit_service_instances = find_spirit_service(trace)
 
 # INFERENCE CONTINUED
-table = deserialize("results/physician.jls")
+table = deserialize("results/physician_big.jls")
 trace = PClean.PCleanTrace(PhysicianModel, table);
 
 row_id = rand(10000:20000)
 row_trace = Dict{PClean.VertexID,Any}()
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "SETH"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "RUCHI"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
+row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "SPIRIT PHYSICIAN SERVICES INC"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.first))] = "STEVEN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(p.last))] = "GILMAN"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "429 N 21ST ST"
 # row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.addr))] = "123 EVERETT RD"
-row_trace[PClean.resolve_dot_expression(trace.model, :Obs, :(a.legal_name))] = "ST. JOHN'S WELL CHILD AND FAMILY CENTER, INC."
 # row_trace[PClean.resolve_dot_expression(
 #     trace.model,
 #     :Obs,
@@ -137,19 +138,27 @@ obs[row_id] = row_trace
 extractor = attribute_extractors(PhysicianModel)
 # results = filter(x->x[1] in existing_observations, extractor.(samples))
 samples = []
+non_samples = []
 p_samples = []
-for _ = 1:1
-    PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(40, 5))
-    r_ = copy(trace.tables[:Obs].rows[row_id])
-    println(extractor(r_))
-    # info = extractor(r_)
-    # if info[1] in existing_observations
-    #   push!(samples, extractor(r_))
-    # end
-    # if info[1][1] in existing_physicians
-    #   push!(p_samples, etractor(r_))
-    # end
+for _ = 1:1000
+    try
+        PClean.run_smc!(trace, :Obs, row_id, PClean.InferenceConfig(20, 5))
+        r_ = copy(trace.tables[:Obs].rows[row_id])
+        # println(extractor(r_))
+        info = extractor(r_)
+        if info[1] in existing_observations
+          push!(samples, extractor(r_))
+        else
+            push!(non_samples, extractor(r_))
+        end
+        # if info[1][1] in existing_physicians
+        #   push!(p_samples, etractor(r_))
+        # end
+    catch e
+    end
 end
+samples
+non_samples
 
 histograms(samples)
 build_response(samples)[2]
